@@ -99,9 +99,10 @@ export async function createProjectRemote(
   if (projectError || !project) throw projectError ?? new Error("프로젝트 생성 실패");
 
   if (input.file) {
-    await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from(DATASETS_BUCKET)
       .upload(`${project.id}/raw/${input.fileName}`, input.file, { upsert: true });
+    if (uploadError) throw uploadError;
   }
 
   const { data: fileRow, error: fileError } = await supabase

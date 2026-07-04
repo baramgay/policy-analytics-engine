@@ -1,6 +1,19 @@
 "use client";
 
 // 업로드 화면: 파일을 브라우저에서 파싱하고 규칙 기반 분석 엔진(runAnalysis)을 돌린 뒤 프로젝트로 저장한다
+// Supabase PostgrestError는 일반 객체({message,details,hint,code})라 instanceof Error가 false다.
+function extractErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof (error as { message: unknown }).message === "string"
+  ) {
+    return (error as { message: string }).message;
+  }
+  return "분석 중 오류가 발생했습니다";
+}
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -54,7 +67,7 @@ export default function UploadPage() {
       });
       router.push(`/projects/${project.meta.id}`);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "분석 중 오류가 발생했습니다");
+      setErrorMessage(extractErrorMessage(error));
     } finally {
       setIsProcessing(false);
     }
