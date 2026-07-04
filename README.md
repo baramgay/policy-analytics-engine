@@ -28,7 +28,7 @@ http://localhost:3000 에서 확인한다.
 | 변수 | 미설정 시 동작 |
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 로컬(브라우저 저장소) 데모 모드로 전 화면 정상 동작 |
-| `ANTHROPIC_API_KEY` | AI 설명 기능만 비활성화("AI 설명 기능은 아직 준비 중입니다" 안내), 규칙 기반 분석 결과는 그대로 표시 |
+| `QWEN_API_KEY`, `QWEN_API_HOST` | AI 설명 기능만 비활성화("AI 설명 기능은 아직 준비 중입니다" 안내), 규칙 기반 분석 결과는 그대로 표시 |
 
 ## 아키텍처 원칙: AI 단일 접점
 
