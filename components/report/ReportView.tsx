@@ -19,6 +19,15 @@ export function ReportView({ project }: { project: ProjectRecord }) {
     toast({ body: "리포트 내용이 복사되었습니다" });
   }
 
+  async function handleCopyLink() {
+    await navigator.clipboard.writeText(window.location.href);
+    toast({ body: "공유 링크가 복사되었습니다" });
+  }
+
+  function handleExportPdf() {
+    window.print();
+  }
+
   async function handleSave() {
     setIsSaving(true);
     try {
@@ -33,7 +42,12 @@ export function ReportView({ project }: { project: ProjectRecord }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <Card>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 16 }}>
+        <div
+          className="no-print"
+          style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 16 }}
+        >
+          <Button label="링크 복사" onClick={handleCopyLink} />
+          <Button label="PDF로 내보내기" onClick={handleExportPdf} />
           <Button label="복사" onClick={handleCopy} />
           <Button label="리포트 저장" variant="primary" isLoading={isSaving} clickAction={handleSave} />
         </div>
