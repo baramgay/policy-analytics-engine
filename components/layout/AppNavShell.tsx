@@ -19,12 +19,14 @@ import {
   UploadCloud,
   BarChart3,
   Sparkles,
+  BookOpen,
 } from "lucide-react";
 import { isDemoMode } from "@/lib/data/store";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "대시보드", icon: LayoutDashboard },
   { href: "/upload", label: "새 프로젝트 업로드", icon: UploadCloud },
+  { href: "/manual", label: "매뉴얼", icon: BookOpen },
 ];
 
 export function AppNavShell({ children }: { children: React.ReactNode }) {

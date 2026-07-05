@@ -52,6 +52,29 @@ describe("recommendCharts", () => {
     expect(types).toContain("pie");
   });
 
+  it("recommends a second bar chart comparing the second categorical column against the primary numeric column", () => {
+    const dataset: ParsedDataset = {
+      columns: ["연령대", "성별", "지출액"],
+      rows: [
+        { 연령대: "20대", 성별: "남", 지출액: 182000 },
+        { 연령대: "20대", 성별: "여", 지출액: 215000 },
+        { 연령대: "30대", 성별: "남", 지출액: 254000 },
+        { 연령대: "30대", 성별: "여", 지출액: 268000 },
+        { 연령대: "40대", 성별: "남", 지출액: 301000 },
+        { 연령대: "40대", 성별: "여", 지출액: 289000 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+    const numericSummary = generateNumericSummary(dataset, schema);
+    const categoricalSummary = generateCategoricalSummary(dataset, schema);
+
+    const result = recommendCharts(dataset, schema, numericSummary, categoricalSummary);
+
+    const secondBarChart = result.find((spec) => spec.id === "bar-성별-지출액");
+    expect(secondBarChart).toBeDefined();
+    expect(secondBarChart?.xKey).toBe("성별");
+  });
+
   it("returns an empty array when the dataset has neither numeric nor categorical columns", () => {
     const dataset: ParsedDataset = {
       columns: ["의견"],

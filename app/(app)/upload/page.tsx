@@ -71,6 +71,27 @@ const SAMPLE_DATASETS = [
     dataType: "일반" as DataDomain,
     analysisGoal: "결측·중복을 정제한 뒤 응답자 만족도 분포를 파악",
   },
+  {
+    fileName: "regional-facility-survey.csv",
+    title: "지역 시설 이용 현황",
+    description: "시군구명과 위경도를 함께 보유한 시설 데이터 (지도+지역 동시 감지)",
+    dataType: "일반" as DataDomain,
+    analysisGoal: "시설 유형별 지역 분포와 이용자 만족도를 지도로 파악",
+  },
+  {
+    fileName: "category-crosstab-sample.csv",
+    title: "연령대·성별 지출 현황",
+    description: "범주형 2종(연령대·성별)과 지출액 교차 데이터 (교차분석 차트)",
+    dataType: "일반" as DataDomain,
+    analysisGoal: "연령대와 성별에 따른 지출 패턴 차이를 교차분석으로 파악",
+  },
+  {
+    fileName: "edge-case-sparse.csv",
+    title: "극소 표본 데이터",
+    description: "행 3개·전체 결측 컬럼 포함 극소 데이터셋 (안정성 검증용)",
+    dataType: "일반" as DataDomain,
+    analysisGoal: "데이터가 매우 적을 때도 분석 파이프라인이 안정적으로 동작하는지 확인",
+  },
 ];
 
 type Step = "form" | "preprocess";

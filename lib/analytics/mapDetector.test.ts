@@ -39,6 +39,23 @@ describe("detectMap", () => {
     expect(result.mode).toBe("region");
   });
 
+  it("prioritizes point mode over region mode when both 위도/경도 and 시군구 columns are present", () => {
+    const dataset: ParsedDataset = {
+      columns: ["시군구", "위도", "경도"],
+      rows: [
+        { 시군구: "창원시", 위도: 35.228, 경도: 128.6811 },
+        { 시군구: "진주시", 위도: 35.18, 경도: 128.1076 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = detectMap(dataset, schema);
+
+    expect(result.detected).toBe(true);
+    expect(result.mode).toBe("point");
+    expect(result.regionColumn).toBeUndefined();
+  });
+
   it("returns no detection when there is no geo-related column", () => {
     const dataset: ParsedDataset = {
       columns: ["금액", "의견"],

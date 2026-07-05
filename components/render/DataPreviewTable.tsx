@@ -17,6 +17,7 @@ const PREVIEW_ROW_LIMIT = 50;
 
 export function DataPreviewTable({ dataset }: { dataset: ParsedDataset }) {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [hoveredColumnId, setHoveredColumnId] = useState<string | null>(null);
 
   const columns = useMemo<ColumnDef<ParsedDataset["rows"][number]>[]>(
     () =>
@@ -57,6 +58,8 @@ export function DataPreviewTable({ dataset }: { dataset: ParsedDataset }) {
                 <th
                   key={header.id}
                   onClick={header.column.getToggleSortingHandler()}
+                  onMouseEnter={() => setHoveredColumnId(header.id)}
+                  onMouseLeave={() => setHoveredColumnId(null)}
                   style={{
                     textAlign: "left",
                     padding: "8px 12px",
@@ -64,6 +67,8 @@ export function DataPreviewTable({ dataset }: { dataset: ParsedDataset }) {
                     cursor: "pointer",
                     whiteSpace: "nowrap",
                     userSelect: "none",
+                    backgroundColor: hoveredColumnId === header.id ? "#f3f4f6" : "transparent",
+                    transition: "background-color 0.1s ease",
                   }}
                 >
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
