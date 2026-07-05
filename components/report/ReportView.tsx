@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Card, Button, Divider, Markdown, Text, List, ListItem, useToast } from "@astryxdesign/core";
 import type { ProjectRecord } from "@/types/analysis";
 import { buildReportMarkdown } from "@/lib/report/buildReport";
+import { buildReportHtml } from "@/lib/report/exportHtml";
 import { addReport } from "@/lib/data/store";
 
 export function ReportView({ project }: { project: ProjectRecord }) {
@@ -28,6 +29,18 @@ export function ReportView({ project }: { project: ProjectRecord }) {
     window.print();
   }
 
+  function handleExportHtml() {
+    const html = buildReportHtml(project.meta, project.analysis);
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${project.meta.title || "report"}_${new Date().toISOString().slice(0, 10)}.html`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast({ body: "리포트가 HTML로 내보내졌습니다" });
+  }
+
   async function handleSave() {
     setIsSaving(true);
     try {
@@ -48,6 +61,7 @@ export function ReportView({ project }: { project: ProjectRecord }) {
         >
           <Button label="링크 복사" onClick={handleCopyLink} />
           <Button label="PDF로 내보내기" onClick={handleExportPdf} />
+          <Button label="HTML로 내보내기" onClick={handleExportHtml} />
           <Button label="복사" onClick={handleCopy} />
           <Button label="리포트 저장" variant="primary" isLoading={isSaving} clickAction={handleSave} />
         </div>
