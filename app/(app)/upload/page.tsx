@@ -39,6 +39,7 @@ import { parseCsvText, parseUploadedFile, runAnalysis } from "@/lib/analytics";
 import { profileSchema } from "@/lib/analytics/schemaProfiler";
 import { analyzePreprocessing, applyPreprocessing } from "@/lib/analytics/preprocessor";
 import { createProject } from "@/lib/data/store";
+import { DataPreviewTable } from "@/components/render/DataPreviewTable";
 
 const DATA_TYPE_OPTIONS: DataDomain[] = ["생활인구", "카드매출", "교통", "문화", "관광", "부동산", "일반"];
 
@@ -315,6 +316,11 @@ export default function UploadPage() {
                   description={`${preview.report.qualityScoreBefore}점 → ${preview.report.qualityScoreAfter}점 (행 ${preview.report.droppedRowCount}개 제거)`}
                 />
               ) : null}
+
+              <div>
+                <Text type="body" weight="bold">원본 데이터 미리보기</Text>
+                <DataPreviewTable dataset={dataset} />
+              </div>
 
               {isProcessing ? <ProgressBar isIndeterminate label="분석 엔진 실행 중" /> : null}
 
