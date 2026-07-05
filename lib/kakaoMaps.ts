@@ -24,7 +24,8 @@ export function loadKakaoMaps(): Promise<void> {
 
     const key = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
     const script = document.createElement("script");
-    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${key}&autoload=false`;
+    // libraries=clusterer: 줌 레벨에 따른 마커 클러스터링에 카카오맵 SDK 자체 MarkerClusterer를 사용하기 위함
+    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${key}&autoload=false&libraries=clusterer`;
     script.onload = () => window.kakao.maps.load(resolve);
     script.onerror = () => {
       readyPromise = null;

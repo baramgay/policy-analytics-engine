@@ -31,13 +31,17 @@ const PIE_COLORS = [
 export function ChartRenderer({ spec }: { spec: ChartSpec }) {
   return (
     <ResponsiveContainer width="100%" height={280}>
-      {spec.type === "bar" ? (
+      {spec.type === "bar" || spec.type === "grouped-bar" ? (
         <BarChart data={spec.data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis dataKey={spec.xKey} tick={{ fontSize: 12 }} />
           <YAxis tick={{ fontSize: 12 }} />
           <Tooltip />
-          <Bar dataKey={spec.yKey} fill="#3b82f6" radius={[4, 4, 0, 0]} />
+          <Bar
+            dataKey={spec.yKey}
+            fill={spec.type === "grouped-bar" ? "#10b981" : "#3b82f6"}
+            radius={[4, 4, 0, 0]}
+          />
         </BarChart>
       ) : spec.type === "line" ? (
         <LineChart data={spec.data}>

@@ -1,7 +1,8 @@
-// 스키마·통계 결과를 근거로 표현 가능한 차트(Bar/Line/Pie)를 규칙 기반으로 추천한다
+// 스키마·통계 결과를 근거로 표현 가능한 차트(Bar/Line/Pie/Grouped-Bar)를 규칙 기반으로 추천한다
 import type {
   CategoricalColumnStats,
   ChartSpec,
+  GroupComparisonResult,
   NumericColumnStats,
   ParsedDataset,
   SchemaSummary,
@@ -35,7 +36,8 @@ export function recommendCharts(
   dataset: ParsedDataset,
   schema: SchemaSummary,
   numericSummary: NumericColumnStats[],
-  categoricalSummary: CategoricalColumnStats[]
+  categoricalSummary: CategoricalColumnStats[],
+  groupComparisonSummary?: GroupComparisonResult[]
 ): ChartSpec[] {
   const specs: ChartSpec[] = [];
   const dateColumn = schema.columns.find((c) => c.type === "date");
@@ -90,6 +92,22 @@ export function recommendCharts(
       data: second.topValues.map((v) => ({
         [second.column]: v.value,
         count: v.count,
+      })),
+    });
+  }
+
+  if (groupComparisonSummary && groupComparisonSummary.length > 0) {
+    const mostSignificant = [...groupComparisonSummary].sort((a, b) => a.pValue - b.pValue)[0];
+    specs.push({
+      id: `grouped-${mostSignificant.groupColumn}-${mostSignificant.numericColumn}`,
+      type: "grouped-bar",
+      title: `${mostSignificant.groupColumn}별 ${mostSignificant.numericColumn} 그룹 비교`,
+      xKey: mostSignificant.groupColumn,
+      yKey: "mean",
+      data: mostSignificant.groupMeans.map((g) => ({
+        [mostSignificant.groupColumn]: g.group,
+        mean: g.mean,
+        count: g.count,
       })),
     });
   }

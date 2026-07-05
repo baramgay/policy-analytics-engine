@@ -6,7 +6,7 @@ import type {
   SchemaSummary,
 } from "@/types/analysis";
 
-function quantile(sorted: number[], q: number): number {
+export function quantile(sorted: number[], q: number): number {
   if (sorted.length === 0) return 0;
   const pos = (sorted.length - 1) * q;
   const base = Math.floor(pos);

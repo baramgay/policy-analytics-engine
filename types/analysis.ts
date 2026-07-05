@@ -65,7 +65,7 @@ export interface CategoricalColumnStats {
   topValues: { value: string; count: number; ratio: number }[];
 }
 
-export type ChartType = "bar" | "line" | "pie";
+export type ChartType = "bar" | "line" | "pie" | "grouped-bar";
 
 export interface ChartSpec {
   id: string;
@@ -82,6 +82,12 @@ export interface MapPoint {
   label: string;
 }
 
+export interface MapCluster {
+  lat: number;
+  lng: number;
+  count: number;
+}
+
 export interface MapSpec {
   detected: boolean;
   mode: "point" | "region" | "none";
@@ -89,6 +95,49 @@ export interface MapSpec {
   lngColumn?: string;
   regionColumn?: string;
   points: MapPoint[];
+  /** 근접 포인트를 격자 단위로 묶은 클러스터 (지도 렌더러가 줌 레벨과 무관하게 참고할 수 있는 기본 클러스터) */
+  clusters?: MapCluster[];
+}
+
+export interface CorrelationPair {
+  columnA: string;
+  columnB: string;
+  coefficient: number;
+  strength: "매우 강함" | "강함" | "보통" | "약함" | "거의 없음";
+}
+
+export interface OutlierColumnInfo {
+  column: string;
+  lowerBound: number;
+  upperBound: number;
+  outlierCount: number;
+  outlierIndices: number[];
+}
+
+export interface GroupComparisonResult {
+  groupColumn: string;
+  numericColumn: string;
+  method: "welch-t" | "anova-f";
+  groupCount: number;
+  statistic: number;
+  pValue: number;
+  significant: boolean;
+  groupMeans: { group: string; mean: number; count: number }[];
+}
+
+export interface TimeSeriesPoint {
+  date: string;
+  value: number;
+  movingAverage: number | null;
+}
+
+export interface TimeSeriesAnalysis {
+  dateColumn: string;
+  numericColumn: string;
+  trendSlope: number;
+  trendIntercept: number;
+  trendDirection: "증가" | "감소" | "보합";
+  points: TimeSeriesPoint[];
 }
 
 export interface AnalysisResult {
@@ -101,6 +150,10 @@ export interface AnalysisResult {
   mapSpecs: MapSpec;
   insightSummary: string;
   generatedAt: string;
+  correlationSummary?: CorrelationPair[];
+  outlierSummary?: OutlierColumnInfo[];
+  groupComparisonSummary?: GroupComparisonResult[];
+  timeSeriesSummary?: TimeSeriesAnalysis[];
 }
 
 export interface ProjectMeta {

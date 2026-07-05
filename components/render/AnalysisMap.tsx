@@ -27,6 +27,8 @@ export function AnalysisMap({ spec }: { spec: MapSpec }) {
   const mapRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markersRef = useRef<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const clustererRef = useRef<any>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,6 +38,9 @@ export function AnalysisMap({ spec }: { spec: MapSpec }) {
       const kakao = window.kakao;
       if (!map || !kakao) return;
 
+      if (clustererRef.current) {
+        clustererRef.current.clear();
+      }
       markersRef.current.forEach((marker) => marker.setMap(null));
       markersRef.current = [];
 
@@ -44,7 +49,6 @@ export function AnalysisMap({ spec }: { spec: MapSpec }) {
         const marker = new kakao.maps.Marker({
           position,
           image: makeMarkerImage(kakao),
-          map,
         });
 
         const infoWindow = new kakao.maps.InfoWindow({
@@ -55,6 +59,20 @@ export function AnalysisMap({ spec }: { spec: MapSpec }) {
         });
 
         markersRef.current.push(marker);
+      }
+
+      // 카카오맵 SDK의 MarkerClusterer가 로드되어 있으면 줌 레벨에 따라 근접 마커를 자동으로 묶어준다.
+      // 로드되지 않은 환경(SDK 버전 차이 등)에서는 개별 마커를 그대로 지도에 표시하는 방식으로 대체한다.
+      if (kakao.maps.MarkerClusterer) {
+        clustererRef.current = new kakao.maps.MarkerClusterer({
+          map,
+          markers: markersRef.current,
+          averageCenter: true,
+          minLevel: 6,
+          gridSize: 60,
+        });
+      } else {
+        markersRef.current.forEach((marker) => marker.setMap(map));
       }
     }
 
@@ -78,6 +96,10 @@ export function AnalysisMap({ spec }: { spec: MapSpec }) {
 
   useEffect(() => {
     return () => {
+      if (clustererRef.current) {
+        clustererRef.current.clear();
+        clustererRef.current = null;
+      }
       markersRef.current.forEach((marker) => marker.setMap(null));
       markersRef.current = [];
       mapRef.current = null;

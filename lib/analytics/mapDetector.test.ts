@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectMap } from "@/lib/analytics/mapDetector";
+import { clusterPoints, detectMap } from "@/lib/analytics/mapDetector";
 import { profileSchema } from "@/lib/analytics/schemaProfiler";
 import type { ParsedDataset } from "@/types/analysis";
 
@@ -70,5 +70,50 @@ describe("detectMap", () => {
 
     expect(result.detected).toBe(false);
     expect(result.mode).toBe("none");
+  });
+
+  it("attaches grid-based clusters when point mode is detected", () => {
+    const dataset: ParsedDataset = {
+      columns: ["위도", "경도"],
+      rows: [
+        { 위도: 35.2285, 경도: 128.6811 },
+        { 위도: 35.2286, 경도: 128.6812 },
+        { 위도: 36.5, 경도: 127.5 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = detectMap(dataset, schema);
+
+    expect(result.clusters).toBeDefined();
+    expect(result.clusters?.length).toBeLessThanOrEqual(2);
+    const totalClustered = result.clusters?.reduce((sum, c) => sum + c.count, 0);
+    expect(totalClustered).toBe(3);
+  });
+});
+
+describe("clusterPoints", () => {
+  it("groups nearby points into a single cluster centroid", () => {
+    const result = clusterPoints([
+      { lat: 35.2285, lng: 128.6811, label: "a" },
+      { lat: 35.2286, lng: 128.6812, label: "b" },
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].count).toBe(2);
+  });
+
+  it("keeps distant points in separate clusters", () => {
+    const result = clusterPoints([
+      { lat: 35.2285, lng: 128.6811, label: "a" },
+      { lat: 37.5665, lng: 126.978, label: "b" },
+    ]);
+
+    expect(result).toHaveLength(2);
+    expect(result.every((c) => c.count === 1)).toBe(true);
+  });
+
+  it("returns an empty array for no points", () => {
+    expect(clusterPoints([])).toEqual([]);
   });
 });

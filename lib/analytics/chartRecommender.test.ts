@@ -75,6 +75,47 @@ describe("recommendCharts", () => {
     expect(secondBarChart?.xKey).toBe("성별");
   });
 
+  it("recommends a grouped-bar chart from the most significant group comparison result", () => {
+    const dataset: ParsedDataset = {
+      columns: ["성별", "지출액"],
+      rows: [
+        { 성별: "남", 지출액: 100 },
+        { 성별: "여", 지출액: 200 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+    const numericSummary = generateNumericSummary(dataset, schema);
+    const categoricalSummary = generateCategoricalSummary(dataset, schema);
+    const groupComparisonSummary = [
+      {
+        groupColumn: "성별",
+        numericColumn: "지출액",
+        method: "welch-t" as const,
+        groupCount: 2,
+        statistic: -5,
+        pValue: 0.01,
+        significant: true,
+        groupMeans: [
+          { group: "남", mean: 100, count: 1 },
+          { group: "여", mean: 200, count: 1 },
+        ],
+      },
+    ];
+
+    const result = recommendCharts(
+      dataset,
+      schema,
+      numericSummary,
+      categoricalSummary,
+      groupComparisonSummary
+    );
+
+    const groupedChart = result.find((spec) => spec.type === "grouped-bar");
+    expect(groupedChart).toBeDefined();
+    expect(groupedChart?.xKey).toBe("성별");
+    expect(groupedChart?.data).toHaveLength(2);
+  });
+
   it("returns an empty array when the dataset has neither numeric nor categorical columns", () => {
     const dataset: ParsedDataset = {
       columns: ["의견"],
