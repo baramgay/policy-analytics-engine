@@ -20,8 +20,12 @@ import {
   BarChart3,
   Sparkles,
   BookOpen,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
 import { isDemoMode } from "@/lib/data/store";
+import { useThemeMode } from "@/components/AppTheme";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "대시보드", icon: LayoutDashboard },
@@ -29,8 +33,22 @@ const NAV_ITEMS = [
   { href: "/manual", label: "매뉴얼", icon: BookOpen },
 ];
 
+const THEME_MODE_LABEL: Record<"light" | "dark" | "system", string> = {
+  light: "테마: 라이트",
+  dark: "테마: 다크",
+  system: "테마: 시스템 설정",
+};
+
+const THEME_MODE_ICON = {
+  light: Sun,
+  dark: Moon,
+  system: Monitor,
+} as const;
+
 export function AppNavShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { mode, cycleMode } = useThemeMode();
+  const ThemeModeIcon = THEME_MODE_ICON[mode];
 
   return (
     <AppShell
@@ -71,6 +89,13 @@ export function AppNavShell({ children }: { children: React.ReactNode }) {
           </SideNavSection>
           <SideNavSection title="엔진">
             <SideNavItem label="규칙 기반 분석 엔진" icon={<BarChart3 size={18} />} isDisabled />
+          </SideNavSection>
+          <SideNavSection title="설정">
+            <SideNavItem
+              label={THEME_MODE_LABEL[mode]}
+              icon={<ThemeModeIcon size={18} />}
+              onClick={cycleMode}
+            />
           </SideNavSection>
         </SideNav>
       }
