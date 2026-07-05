@@ -14,7 +14,15 @@ export default async function AnalysisDashboardPage({ params }: { params: Promis
   return (
     <Section padding={6}>
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
+            flexWrap: "wrap",
+          }}
+        >
           <div>
             <Heading level={1}>분석 대시보드</Heading>
             <Text type="supporting" color="secondary">{project.meta.title}</Text>

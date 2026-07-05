@@ -3,7 +3,8 @@
 // 분석 대시보드 탭 전환 컨트롤러: 차트/데이터 품질/지도/AI 설명 패널을 직접 분기해서 그린다
 import { useEffect, useMemo, useState } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
-import { TabList, Tab, Grid, Card, Text, Badge, SegmentedControl, SegmentedControlItem } from "@astryxdesign/core";
+import { BarChart3 } from "lucide-react";
+import { TabList, Tab, Grid, Card, Text, Badge, EmptyState, SegmentedControl, SegmentedControlItem } from "@astryxdesign/core";
 import type {
   CategoricalColumnStats,
   ColumnDataType,
@@ -179,18 +180,25 @@ export function AnalysisDashboardTabs({ project }: { project: ProjectRecord }) {
 
   return (
     <div>
-      <TabList value={tab} onChange={handleTabChange} hasDivider>
-        <Tab value="charts" label="차트" />
-        <Tab value="quality" label="데이터 품질" />
-        <Tab value="insights" label="심화 분석" />
-        <Tab value="map" label="지도" />
-        <Tab value="ai" label="AI 설명" />
-      </TabList>
+      {/* 375px 등 좁은 화면에서 탭 5개가 잘리지 않도록 가로 스크롤 허용 */}
+      <div style={{ overflowX: "auto" }}>
+        <TabList value={tab} onChange={handleTabChange} hasDivider>
+          <Tab value="charts" label="차트" />
+          <Tab value="quality" label="데이터 품질" />
+          <Tab value="insights" label="심화 분석" />
+          <Tab value="map" label="지도" />
+          <Tab value="ai" label="AI 설명" />
+        </TabList>
+      </div>
 
       <div style={{ paddingTop: 16 }}>
         {tab === "charts" ? (
           analysis.chartSpecs.length === 0 ? (
-            <Text color="secondary">추천할 차트가 없습니다.</Text>
+            <EmptyState
+              title="추천할 차트가 없습니다"
+              description="현재 데이터에서는 자동으로 추천할 차트를 찾지 못했습니다. 다른 데이터를 업로드하거나 데이터 품질 탭에서 변수 구성을 확인해 보세요."
+              icon={<BarChart3 size={32} />}
+            />
           ) : (
             <Grid columns={{ minWidth: 360, max: 2 }} gap={4}>
               {analysis.chartSpecs.map((spec) => (

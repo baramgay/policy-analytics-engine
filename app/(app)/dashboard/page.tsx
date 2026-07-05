@@ -1,14 +1,9 @@
 // 대시보드 화면: 저장된 프로젝트 목록과 핵심 지표(KPI)를 보여준다. 계산은 이미 끝난 값만 표시한다
 import { FolderKanban, Gauge, FileStack, Sparkles } from "lucide-react";
-import { Card, Grid, Heading, Text, List, ListItem, Badge, EmptyState, Section } from "@astryxdesign/core";
+import { Grid, Card, Heading, Text, Section } from "@astryxdesign/core";
 import { listProjects } from "@/lib/data/store";
 import { LinkButton } from "@/components/nav/LinkButton";
-
-function qualityBadge(score: number) {
-  if (score >= 80) return <Badge variant="success" label={`품질 ${score}점`} />;
-  if (score >= 50) return <Badge variant="warning" label={`품질 ${score}점`} />;
-  return <Badge variant="error" label={`품질 ${score}점`} />;
-}
+import { ProjectListPanel } from "@/components/dashboard/ProjectListPanel";
 
 export default async function DashboardPage() {
   const projects = await listProjects();
@@ -22,7 +17,15 @@ export default async function DashboardPage() {
   return (
     <Section padding={6}>
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
+            flexWrap: "wrap",
+          }}
+        >
           <div>
             <Heading level={1}>대시보드</Heading>
             <Text type="supporting" color="secondary">
@@ -63,29 +66,7 @@ export default async function DashboardPage() {
           </Card>
         </Grid>
 
-        <Card>
-          <Heading level={2}>프로젝트 목록</Heading>
-          {projectCount === 0 ? (
-            <EmptyState
-              title="아직 등록된 프로젝트가 없습니다"
-              description="데이터 파일을 업로드하면 분석 엔진이 자동으로 품질 검사와 통계를 계산합니다"
-              icon={<FolderKanban size={32} />}
-              actions={<LinkButton href="/upload" label="데이터 업로드하기" variant="primary" />}
-            />
-          ) : (
-            <List hasDividers density="balanced">
-              {projects.map((project) => (
-                <ListItem
-                  key={project.meta.id}
-                  href={`/projects/${project.meta.id}`}
-                  label={project.meta.title}
-                  description={`${project.meta.dataType} · ${project.meta.analysisGoal}`}
-                  endContent={qualityBadge(project.analysis.qualityScore)}
-                />
-              ))}
-            </List>
-          )}
-        </Card>
+        <ProjectListPanel projects={projects} />
       </div>
     </Section>
   );

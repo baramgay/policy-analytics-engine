@@ -20,12 +20,20 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   return (
     <Section padding={6}>
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
+            flexWrap: "wrap",
+          }}
+        >
           <div>
             <Heading level={1}>{project.meta.title}</Heading>
             <Text type="supporting" color="secondary">{project.meta.description || "설명이 없습니다"}</Text>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Badge variant={qualityVariant(project.analysis.qualityScore)} label={project.meta.dataType} />
             <ShareLinkButton projectId={project.meta.id} />
             <LinkButton href={`/projects/${project.meta.id}/analysis`} label="분석 대시보드 보기" variant="primary" />
