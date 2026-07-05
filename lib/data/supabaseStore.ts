@@ -1,7 +1,8 @@
 // Supabase 설정 시 사용하는 원격 저장 백엔드. 4개 테이블(projects/uploaded_files/analysis_results/reports)에 매핑한다
 import type { AnalysisResult, ProjectRecord, ReportRecord } from "@/types/analysis";
 import { getSupabaseClient, DATASETS_BUCKET } from "@/lib/supabase/client";
-import type { CreateProjectInput } from "./types";
+import { generateShareToken } from "./shareToken";
+import type { CreateProjectInput, ProjectComment, ProjectShare } from "./types";
 
 function toAnalysisResult(row: Record<string, unknown>): AnalysisResult {
   return {
@@ -180,6 +181,89 @@ export async function addReportRemote(
     id: data.id,
     projectId,
     title: data.title,
+    content: data.content,
+    createdAt: data.created_at,
+  };
+}
+
+export async function createShareRemote(
+  projectId: string,
+  expiresAt: string | null = null
+): Promise<ProjectShare> {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase가 설정되지 않았습니다.");
+
+  const { data, error } = await supabase
+    .from("project_shares")
+    .insert({ project_id: projectId, token: generateShareToken(), expires_at: expiresAt })
+    .select()
+    .single();
+  if (error || !data) throw error ?? new Error("공유 링크 생성 실패");
+
+  return {
+    id: data.id,
+    projectId: data.project_id,
+    token: data.token,
+    createdAt: data.created_at,
+    expiresAt: data.expires_at,
+  };
+}
+
+export async function getProjectByTokenRemote(token: string): Promise<ProjectRecord | null> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return null;
+
+  const { data: share, error } = await supabase
+    .from("project_shares")
+    .select("*")
+    .eq("token", token)
+    .single();
+  if (error || !share) return null;
+  if (share.expires_at && new Date(share.expires_at).getTime() < Date.now()) return null;
+
+  return getProjectRemote(share.project_id);
+}
+
+export async function listCommentsRemote(projectId: string): Promise<ProjectComment[]> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("project_comments")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+
+  return data.map(
+    (row: any): ProjectComment => ({
+      id: row.id,
+      projectId: row.project_id,
+      authorName: row.author_name,
+      content: row.content,
+      createdAt: row.created_at,
+    })
+  );
+}
+
+export async function addCommentRemote(
+  projectId: string,
+  input: { authorName: string; content: string }
+): Promise<ProjectComment> {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase가 설정되지 않았습니다.");
+
+  const { data, error } = await supabase
+    .from("project_comments")
+    .insert({ project_id: projectId, author_name: input.authorName, content: input.content })
+    .select()
+    .single();
+  if (error || !data) throw error ?? new Error("댓글 저장 실패");
+
+  return {
+    id: data.id,
+    projectId,
+    authorName: data.author_name,
     content: data.content,
     createdAt: data.created_at,
   };

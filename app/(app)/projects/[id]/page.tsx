@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Card, Heading, Text, ProgressBar, Badge, Section } from "@astryxdesign/core";
 import { getProject } from "@/lib/data/store";
 import { ProjectDetailTabs } from "@/components/project/ProjectDetailTabs";
+import { ShareLinkButton } from "@/components/project/ShareLinkButton";
 import { LinkButton } from "@/components/nav/LinkButton";
 
 function qualityVariant(score: number): "success" | "warning" | "error" {
@@ -26,6 +27,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <Badge variant={qualityVariant(project.analysis.qualityScore)} label={project.meta.dataType} />
+            <ShareLinkButton projectId={project.meta.id} />
             <LinkButton href={`/projects/${project.meta.id}/analysis`} label="분석 대시보드 보기" variant="primary" />
           </div>
         </div>
