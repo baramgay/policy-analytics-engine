@@ -93,6 +93,41 @@ const SAMPLE_DATASETS = [
     dataType: "일반" as DataDomain,
     analysisGoal: "데이터가 매우 적을 때도 분석 파이프라인이 안정적으로 동작하는지 확인",
   },
+  {
+    fileName: "card-sales-by-district.csv",
+    title: "카드매출 현황",
+    description: "시군별 업종별 월간 카드매출액과 결제건수",
+    dataType: "카드매출" as DataDomain,
+    analysisGoal: "지역·업종별 카드매출 편차를 파악해 소상공인 지원 정책에 활용",
+  },
+  {
+    fileName: "traffic-volume-by-hour.csv",
+    title: "시간대별 교통량",
+    description: "시군별 시간대별 통행량과 평균 통행속도",
+    dataType: "교통" as DataDomain,
+    analysisGoal: "혼잡 시간대와 지역을 파악해 교통정책 수립에 활용",
+  },
+  {
+    fileName: "culture-program-participation.csv",
+    title: "문화프로그램 참여 현황",
+    description: "문화시설별 프로그램 참여인원과 만족도",
+    dataType: "문화" as DataDomain,
+    analysisGoal: "프로그램별 참여도와 만족도를 파악해 문화정책 개선에 활용",
+  },
+  {
+    fileName: "tourist-visitors-by-season.csv",
+    title: "계절별 관광객 방문 현황",
+    description: "관광지별 계절별 방문객수와 평균 체류시간",
+    dataType: "관광" as DataDomain,
+    analysisGoal: "계절별 관광지 방문 패턴을 파악해 관광정책 수립에 활용",
+  },
+  {
+    fileName: "real-estate-transactions.csv",
+    title: "부동산 거래 현황",
+    description: "시군별 아파트 단지 거래금액과 거래건수",
+    dataType: "부동산" as DataDomain,
+    analysisGoal: "지역별 부동산 거래 동향을 파악해 주택정책 수립에 활용",
+  },
 ];
 
 type Step = "form" | "preprocess";
