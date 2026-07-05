@@ -1,60 +1,88 @@
 "use client";
 
-// 분석 엔진이 감지한 MapSpec을 MapLibre GL로 표시만 하는 순수 렌더러 (좌표 판별 로직은 lib/analytics/mapDetector가 담당)
+// 분석 엔진이 감지한 MapSpec을 카카오맵으로 표시만 하는 순수 렌더러 (좌표 판별 로직은 lib/analytics/mapDetector가 담당)
 import { useEffect, useRef } from "react";
-import maplibregl from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
 import type { MapSpec } from "@/types/analysis";
+import { loadKakaoMaps } from "@/lib/kakaoMaps";
 
-const GYEONGNAM_CENTER: [number, number] = [128.2132, 35.2601];
+const GYEONGNAM_CENTER = { lat: 35.2601, lng: 128.2132 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function makeMarkerImage(kakao: any) {
+  const svg = encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26">` +
+      `<circle cx="13" cy="13" r="11" fill="#3b82f6" stroke="white" stroke-width="2.5"/>` +
+      `</svg>`,
+  );
+  return new kakao.maps.MarkerImage(
+    `data:image/svg+xml,${svg}`,
+    new kakao.maps.Size(26, 26),
+    { offset: new kakao.maps.Point(13, 13) },
+  );
+}
 
 export function AnalysisMap({ spec }: { spec: MapSpec }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mapRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const markersRef = useRef<any[]>([]);
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    let cancelled = false;
 
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: "https://demotiles.maplibre.org/style.json",
-      center: GYEONGNAM_CENTER,
-      zoom: 8,
+    function applyMarkers() {
+      const map = mapRef.current;
+      const kakao = window.kakao;
+      if (!map || !kakao) return;
+
+      markersRef.current.forEach((marker) => marker.setMap(null));
+      markersRef.current = [];
+
+      for (const point of spec.points) {
+        const position = new kakao.maps.LatLng(point.lat, point.lng);
+        const marker = new kakao.maps.Marker({
+          position,
+          image: makeMarkerImage(kakao),
+          map,
+        });
+
+        const infoWindow = new kakao.maps.InfoWindow({
+          content: `<div style="padding:6px 10px;font-size:12px;">${point.label}</div>`,
+        });
+        kakao.maps.event.addListener(marker, "click", () => {
+          infoWindow.open(map, marker);
+        });
+
+        markersRef.current.push(marker);
+      }
+    }
+
+    loadKakaoMaps().then(() => {
+      if (cancelled || !containerRef.current) return;
+      const kakao = window.kakao;
+      if (!mapRef.current) {
+        mapRef.current = new kakao.maps.Map(containerRef.current, {
+          center: new kakao.maps.LatLng(GYEONGNAM_CENTER.lat, GYEONGNAM_CENTER.lng),
+          level: 9,
+        });
+        mapRef.current.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
+      }
+      applyMarkers();
     });
-    map.addControl(new maplibregl.NavigationControl(), "top-right");
-    mapRef.current = map;
 
     return () => {
-      map.remove();
+      cancelled = true;
+    };
+  }, [spec.points]);
+
+  useEffect(() => {
+    return () => {
+      markersRef.current.forEach((marker) => marker.setMap(null));
+      markersRef.current = [];
       mapRef.current = null;
     };
   }, []);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    const markers: maplibregl.Marker[] = [];
-    const applyMarkers = () => {
-      for (const point of spec.points) {
-        const marker = new maplibregl.Marker({ color: "#3b82f6" })
-          .setLngLat([point.lng, point.lat])
-          .setPopup(new maplibregl.Popup({ offset: 16 }).setText(point.label))
-          .addTo(map);
-        markers.push(marker);
-      }
-    };
-
-    if (map.isStyleLoaded()) {
-      applyMarkers();
-    } else {
-      map.once("load", applyMarkers);
-    }
-
-    return () => {
-      markers.forEach((marker) => marker.remove());
-    };
-  }, [spec.points]);
 
   if (!spec.detected || spec.points.length === 0) {
     return (
