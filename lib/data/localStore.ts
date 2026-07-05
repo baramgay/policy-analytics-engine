@@ -59,6 +59,7 @@ export async function createProjectLocal(
     },
     analysis: input.analysis,
     reports: [],
+    preprocessing: input.preprocessing,
   };
 
   const projects = readAll();

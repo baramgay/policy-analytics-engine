@@ -15,6 +15,7 @@ export function ProjectDetailTabs({ project }: { project: ProjectRecord }) {
         <Tab value="overview" label="개요" />
         <Tab value="schema" label="데이터 스키마" />
         <Tab value="recommend" label="추천 분석" />
+        {project.preprocessing ? <Tab value="preprocessing" label="전처리 내역" /> : null}
       </TabList>
 
       <div style={{ paddingTop: 16 }}>
@@ -52,6 +53,30 @@ export function ProjectDetailTabs({ project }: { project: ProjectRecord }) {
               <ListItem label="지역 분포 지도" description="위치 정보가 감지되어 지도 시각화가 가능합니다" />
             ) : null}
           </List>
+        ) : null}
+
+        {tab === "preprocessing" && project.preprocessing ? (
+          <MetadataList columns="single">
+            <MetadataListItem label="결측치 처리">{project.preprocessing.options.missingStrategy}</MetadataListItem>
+            <MetadataListItem label="중복 행 처리">{project.preprocessing.options.duplicateStrategy}</MetadataListItem>
+            <MetadataListItem label="이상치 처리">{project.preprocessing.options.outlierStrategy}</MetadataListItem>
+            <MetadataListItem label="제거된 행 수">{project.preprocessing.droppedRowCount}행</MetadataListItem>
+            <MetadataListItem label="채운 셀">
+              {project.preprocessing.filledCellCount.length > 0
+                ? project.preprocessing.filledCellCount
+                    .map((f) => `${f.column}: ${f.count}건(→${f.fillValue})`)
+                    .join(", ")
+                : "없음"}
+            </MetadataListItem>
+            <MetadataListItem label="캡핑된 이상치">
+              {project.preprocessing.cappedOutlierCount.length > 0
+                ? project.preprocessing.cappedOutlierCount.map((c) => `${c.column}: ${c.count}건`).join(", ")
+                : "없음"}
+            </MetadataListItem>
+            <MetadataListItem label="품질 점수 변화">
+              {project.preprocessing.qualityScoreBefore}점 → {project.preprocessing.qualityScoreAfter}점
+            </MetadataListItem>
+          </MetadataList>
         ) : null}
       </div>
     </div>

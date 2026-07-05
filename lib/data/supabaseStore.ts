@@ -157,6 +157,8 @@ export async function createProjectRemote(
     },
     analysis: toAnalysisResult(analysisRow),
     reports: [],
+    // 전처리 리포트는 별도 테이블이 없어 원격 저장소에는 영속화되지 않음 — 생성 직후 응답에만 포함
+    preprocessing: input.preprocessing,
   };
 }
 

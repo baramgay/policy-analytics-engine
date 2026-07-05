@@ -50,6 +50,18 @@ export async function parseXlsxFile(file: File): Promise<ParsedDataset> {
   return rowsToDataset(rawRows);
 }
 
+export function parseCsvText(text: string): Promise<ParsedDataset> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, unknown>>(text, {
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: false,
+      complete: (result) => resolve(rowsToDataset(result.data)),
+      error: (error: Error) => reject(error),
+    });
+  });
+}
+
 export async function parseUploadedFile(file: File): Promise<ParsedDataset> {
   const extension = file.name.split(".").pop()?.toLowerCase();
   if (extension === "csv") return parseCsvFile(file);

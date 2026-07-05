@@ -131,11 +131,38 @@ export interface ReportRecord {
   createdAt: string;
 }
 
+export type MissingStrategy = "keep" | "drop-row" | "fill";
+export type DuplicateStrategy = "keep" | "drop";
+export type OutlierStrategy = "keep" | "cap-iqr";
+
+export interface PreprocessingOptions {
+  missingStrategy: MissingStrategy;
+  duplicateStrategy: DuplicateStrategy;
+  outlierStrategy: OutlierStrategy;
+}
+
+export interface PreprocessingSuggestion {
+  missingRate: number;
+  duplicateRowCount: number;
+  outlierColumns: { column: string; outlierCount: number }[];
+  recommended: PreprocessingOptions;
+}
+
+export interface PreprocessingReport {
+  options: PreprocessingOptions;
+  droppedRowCount: number;
+  filledCellCount: { column: string; count: number; fillValue: string | number }[];
+  cappedOutlierCount: { column: string; count: number }[];
+  qualityScoreBefore: number;
+  qualityScoreAfter: number;
+}
+
 export interface ProjectRecord {
   meta: ProjectMeta;
   file: UploadedFileMeta;
   analysis: AnalysisResult;
   reports: ReportRecord[];
+  preprocessing?: PreprocessingReport;
 }
 
 /** AI narrator에 전달되는 입력. 원본 행 데이터(rows)는 절대 포함하지 않는다. */
