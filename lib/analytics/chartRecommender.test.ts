@@ -99,6 +99,8 @@ describe("recommendCharts", () => {
           { group: "남", mean: 100, count: 1 },
           { group: "여", mean: 200, count: 1 },
         ],
+        effectSize: null,
+        interpretation: "",
       },
     ];
 
