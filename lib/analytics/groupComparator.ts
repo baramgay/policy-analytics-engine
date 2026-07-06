@@ -1,93 +1,10 @@
 // 범주형(그룹) 컬럼과 수치형 컬럼 조합에 대해 그룹간 차이검정을 직접 구현한다
 // 2그룹: Welch's t-test, 3그룹 이상: One-way ANOVA F-statistic (외부 통계 라이브러리 미사용)
 import type { GroupComparisonResult, ParsedDataset, SchemaSummary } from "@/types/analysis";
+import { tTestPValue, fTestPValue } from "./statUtils";
 
 const MAX_GROUP_COUNT = 20;
 const SIGNIFICANCE_LEVEL = 0.05;
-
-// Lanczos 근사로 로그 감마함수를 계산한다 (불완전 베타함수 계산에 필요)
-function logGamma(x: number): number {
-  const g = 7;
-  const c = [
-    0.99999999999980993, 676.5203681218851, -1259.1392167224028,
-    771.32342877765313, -176.61502916214059, 12.507343278686905,
-    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7,
-  ];
-  if (x < 0.5) {
-    return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x);
-  }
-  const xm1 = x - 1;
-  let a = c[0];
-  const t = xm1 + g + 0.5;
-  for (let i = 1; i < g + 2; i++) {
-    a += c[i] / (xm1 + i);
-  }
-  return 0.5 * Math.log(2 * Math.PI) + (xm1 + 0.5) * Math.log(t) - t + Math.log(a);
-}
-
-// 정규화된 불완전 베타함수 I_x(a, b) — 연분수 전개(Numerical Recipes 알고리즘)
-function betacf(x: number, a: number, b: number): number {
-  const MAXIT = 200;
-  const EPS = 3e-9;
-  const FPMIN = 1e-30;
-  const qab = a + b;
-  const qap = a + 1;
-  const qam = a - 1;
-  let c = 1;
-  let d = 1 - (qab * x) / qap;
-  if (Math.abs(d) < FPMIN) d = FPMIN;
-  d = 1 / d;
-  let h = d;
-
-  for (let m = 1; m <= MAXIT; m++) {
-    const m2 = 2 * m;
-    let aa = (m * (b - m) * x) / ((qam + m2) * (a + m2));
-    d = 1 + aa * d;
-    if (Math.abs(d) < FPMIN) d = FPMIN;
-    c = 1 + aa / c;
-    if (Math.abs(c) < FPMIN) c = FPMIN;
-    d = 1 / d;
-    h *= d * c;
-
-    aa = (-(a + m) * (qab + m) * x) / ((a + m2) * (qap + m2));
-    d = 1 + aa * d;
-    if (Math.abs(d) < FPMIN) d = FPMIN;
-    c = 1 + aa / c;
-    if (Math.abs(c) < FPMIN) c = FPMIN;
-    d = 1 / d;
-    const del = d * c;
-    h *= del;
-
-    if (Math.abs(del - 1) < EPS) break;
-  }
-  return h;
-}
-
-function regularizedIncompleteBeta(x: number, a: number, b: number): number {
-  if (x <= 0) return 0;
-  if (x >= 1) return 1;
-
-  const bt = Math.exp(
-    logGamma(a + b) - logGamma(a) - logGamma(b) + a * Math.log(x) + b * Math.log(1 - x)
-  );
-
-  if (x < (a + 1) / (a + b + 2)) {
-    return (bt * betacf(x, a, b)) / a;
-  }
-  return 1 - (bt * betacf(1 - x, b, a)) / b;
-}
-
-function tTestPValue(t: number, df: number): number {
-  if (!Number.isFinite(t) || !Number.isFinite(df) || df <= 0) return 1;
-  const x = df / (df + t * t);
-  return regularizedIncompleteBeta(x, df / 2, 0.5);
-}
-
-function fTestPValue(f: number, df1: number, df2: number): number {
-  if (!Number.isFinite(f) || f <= 0 || df1 <= 0 || df2 <= 0) return 1;
-  const x = df2 / (df2 + df1 * f);
-  return regularizedIncompleteBeta(x, df2 / 2, df1 / 2);
-}
 
 function mean(values: number[]): number {
   return values.reduce((sum, v) => sum + v, 0) / values.length;
