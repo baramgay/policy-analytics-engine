@@ -114,6 +114,12 @@ export interface OutlierColumnInfo {
   outlierIndices: number[];
 }
 
+export interface EffectSize {
+  type: "cohen_d" | "eta_squared";
+  value: number;
+  magnitude: "작음" | "중간" | "큼";
+}
+
 export interface GroupComparisonResult {
   groupColumn: string;
   numericColumn: string;
@@ -123,6 +129,8 @@ export interface GroupComparisonResult {
   pValue: number;
   significant: boolean;
   groupMeans: { group: string; mean: number; count: number }[];
+  effectSize: EffectSize | null;
+  interpretation: string;
 }
 
 export interface TimeSeriesPoint {

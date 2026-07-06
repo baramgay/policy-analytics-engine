@@ -83,4 +83,69 @@ describe("generateGroupComparisonSummary", () => {
 
     expect(result).toEqual([]);
   });
+
+  it("computes Cohen's d for a two-group comparison with a clear mean difference", () => {
+    const dataset: ParsedDataset = {
+      columns: ["구분", "값"],
+      rows: [
+        { 구분: "A", 값: 8 },
+        { 구분: "A", 값: 9 },
+        { 구분: "A", 값: 10 },
+        { 구분: "A", 값: 11 },
+        { 구분: "A", 값: 12 },
+        { 구분: "B", 값: 13 },
+        { 구분: "B", 값: 14 },
+        { 구분: "B", 값: 15 },
+        { 구분: "B", 값: 16 },
+        { 구분: "B", 값: 17 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = generateGroupComparisonSummary(dataset, schema);
+
+    expect(result[0].effectSize?.type).toBe("cohen_d");
+    expect(Math.abs(result[0].effectSize?.value ?? 0)).toBeCloseTo(3.162, 2);
+    expect(result[0].effectSize?.magnitude).toBe("큼");
+  });
+
+  it("computes eta squared for a three-group ANOVA comparison", () => {
+    const dataset: ParsedDataset = {
+      columns: ["연령대", "지출액"],
+      rows: [
+        { 연령대: "20대", 지출액: 100 },
+        { 연령대: "20대", 지출액: 110 },
+        { 연령대: "30대", 지출액: 200 },
+        { 연령대: "30대", 지출액: 210 },
+        { 연령대: "40대", 지출액: 300 },
+        { 연령대: "40대", 지출액: 310 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = generateGroupComparisonSummary(dataset, schema);
+
+    expect(result[0].effectSize?.type).toBe("eta_squared");
+    expect(result[0].effectSize?.value).toBeCloseTo(0.996, 2);
+    expect(result[0].effectSize?.magnitude).toBe("큼");
+  });
+
+  it("flags a small effect size despite statistical significance in a large sample", () => {
+    const groupA = Array.from({ length: 1000 }, (_, i) => (i % 2 === 0 ? 99.5 : 100.5));
+    const groupB = Array.from({ length: 1000 }, (_, i) => (i % 2 === 0 ? 99.6 : 100.6));
+    const dataset: ParsedDataset = {
+      columns: ["구분", "값"],
+      rows: [
+        ...groupA.map((v) => ({ 구분: "A", 값: v })),
+        ...groupB.map((v) => ({ 구분: "B", 값: v })),
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = generateGroupComparisonSummary(dataset, schema);
+
+    expect(result[0].significant).toBe(true);
+    expect(result[0].effectSize?.magnitude).toBe("작음");
+    expect(result[0].interpretation).toContain("작아 실질적 차이는 크지 않음");
+  });
 });
