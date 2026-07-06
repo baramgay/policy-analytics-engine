@@ -59,4 +59,18 @@ describe("chiSquarePValue", () => {
     expect(chiSquarePValue(3, 0)).toBe(1);
     expect(chiSquarePValue(3, -2)).toBe(1);
   });
+
+  it("exercises the gammaSeries branch (x < s+1) for a statistic far below df", () => {
+    // s = df/2 = 5, x = chiSquare/2 = 0.5, 0.5 < 6 → series branch
+    const pValue = chiSquarePValue(1, 10);
+    expect(pValue).toBeCloseTo(0.9999, 3);
+  });
+
+  it("exercises the gammaSeries branch (x < s+1) near the distribution mean", () => {
+    // s = df/2 = 5, x = chiSquare/2 = 4.5, 4.5 < 6 → series branch
+    const pValue = chiSquarePValue(9, 10);
+    expect(pValue).toBeGreaterThan(0.4);
+    expect(pValue).toBeLessThan(0.6);
+    expect(pValue).toBeCloseTo(0.53, 2);
+  });
 });
