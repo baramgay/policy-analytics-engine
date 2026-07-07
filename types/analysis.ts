@@ -120,6 +120,12 @@ export interface CategoricalCorrelationPair {
   interpretation: string;
 }
 
+export interface VifResult {
+  column: string;
+  vif: number | null;
+  concern: boolean;
+}
+
 export interface OutlierColumnInfo {
   column: string;
   lowerBound: number;
@@ -174,6 +180,7 @@ export interface AnalysisResult {
   generatedAt: string;
   correlationSummary?: CorrelationPair[];
   categoricalCorrelationSummary?: CategoricalCorrelationPair[];
+  vifSummary?: VifResult[];
   outlierSummary?: OutlierColumnInfo[];
   groupComparisonSummary?: GroupComparisonResult[];
   timeSeriesSummary?: TimeSeriesAnalysis[];

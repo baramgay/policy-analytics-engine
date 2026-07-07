@@ -4,8 +4,10 @@ import type {
   CorrelationPair,
   ParsedDataset,
   SchemaSummary,
+  VifResult,
 } from "@/types/analysis";
 import { tTestPValue, chiSquarePValue } from "./statUtils";
+import { multipleRegressionRSquared } from "./regressionUtils";
 
 const SIGNIFICANCE_LEVEL = 0.05;
 
@@ -190,4 +192,33 @@ export function generateCategoricalCorrelationSummary(
   }
 
   return pairs;
+}
+
+export function computeVif(dataset: ParsedDataset, schema: SchemaSummary): VifResult[] {
+  const numericColumns = schema.columns.filter((c) => c.type === "numeric");
+  if (numericColumns.length < 2) return [];
+
+  const completeCases = dataset.rows.filter((row) =>
+    numericColumns.every((c) => typeof row[c.name] === "number")
+  );
+
+  return numericColumns.map((column) => {
+    const others = numericColumns.filter((c) => c.name !== column.name);
+    if (completeCases.length < others.length + 2) {
+      return { column: column.name, vif: null, concern: false };
+    }
+
+    const target = completeCases.map((row) => row[column.name] as number);
+    const predictors = others.map((other) =>
+      completeCases.map((row) => row[other.name] as number)
+    );
+
+    const rSquared = multipleRegressionRSquared(target, predictors);
+    if (rSquared === null || rSquared >= 1) {
+      return { column: column.name, vif: null, concern: false };
+    }
+
+    const vif = Number((1 / (1 - rSquared)).toFixed(2));
+    return { column: column.name, vif, concern: vif > 10 };
+  });
 }
