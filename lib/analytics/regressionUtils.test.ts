@@ -24,6 +24,42 @@ describe("solveLinearSystem", () => {
     );
     expect(solution).toBeNull();
   });
+
+  it("solves a 3x3 system that requires a pivot row swap", () => {
+    // col0의 최대 절대값이 row1(4)에 있어 부분 피벗팅 시 row0<->row1 스왑이 실제로 발생한다
+    const solution = solveLinearSystem(
+      [
+        [1, 2, 1],
+        [4, 4, 5],
+        [2, 1, 3],
+      ],
+      [8, 27, 13]
+    );
+    expect(solution?.[0]).toBeCloseTo(1, 5);
+    expect(solution?.[1]).toBeCloseTo(2, 5);
+    expect(solution?.[2]).toBeCloseTo(3, 5);
+  });
+
+  it("returns null for a non-square coefficient matrix or mismatched b length", () => {
+    expect(
+      solveLinearSystem(
+        [
+          [1, 2, 3],
+          [4, 5, 6],
+        ],
+        [1, 2]
+      )
+    ).toBeNull();
+    expect(
+      solveLinearSystem(
+        [
+          [1, 2],
+          [3, 4],
+        ],
+        [1, 2, 3]
+      )
+    ).toBeNull();
+  });
 });
 
 describe("multipleRegressionRSquared", () => {
@@ -57,6 +93,34 @@ describe("multipleRegressionRSquared", () => {
     const predictorB = [2, 3, 4];
 
     const rSquared = multipleRegressionRSquared(target, [predictorA, predictorB]);
+
+    expect(rSquared).toBeNull();
+  });
+
+  it("returns a non-null value at the exact minimum sample boundary (n === predictorCount + 2)", () => {
+    const target = [1, 2, 4];
+    const predictorA = [1, 2, 3];
+
+    const rSquared = multipleRegressionRSquared(target, [predictorA]);
+
+    expect(rSquared).not.toBeNull();
+    expect(rSquared as number).toBeCloseTo(0.9642857142857143, 10);
+  });
+
+  it("returns null when the target is constant (ssTotal === 0)", () => {
+    const target = [5, 5, 5, 5];
+    const predictorA = [1, 2, 3, 4];
+
+    const rSquared = multipleRegressionRSquared(target, [predictorA]);
+
+    expect(rSquared).toBeNull();
+  });
+
+  it("returns null when a predictor array's length does not match the target length", () => {
+    const target = [1, 2, 3, 4, 5];
+    const predictorA = [1, 2, 3, 4];
+
+    const rSquared = multipleRegressionRSquared(target, [predictorA]);
 
     expect(rSquared).toBeNull();
   });
