@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateCorrelationSummary } from "@/lib/analytics/correlationAnalyzer";
+import { generateCorrelationSummary, generateCategoricalCorrelationSummary } from "@/lib/analytics/correlationAnalyzer";
 import { profileSchema } from "@/lib/analytics/schemaProfiler";
 import type { ParsedDataset } from "@/types/analysis";
 
@@ -130,5 +130,53 @@ describe("generateCorrelationSummary", () => {
     expect(result[0].pValue).toBe(0);
     expect(result[0].interpretation).toContain("p<0.001");
     expect(result[0].interpretation).not.toContain("p=0으로");
+  });
+});
+
+describe("generateCategoricalCorrelationSummary", () => {
+  it("detects a strong, reliable association between two categorical columns", () => {
+    const rows = [
+      ...Array.from({ length: 20 }, () => ({ 그룹: "A", 결과: "성공" })),
+      ...Array.from({ length: 20 }, () => ({ 그룹: "B", 결과: "실패" })),
+    ];
+    const dataset: ParsedDataset = { columns: ["그룹", "결과"], rows };
+    const schema = profileSchema(dataset);
+
+    const result = generateCategoricalCorrelationSummary(dataset, schema);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].significant).toBe(true);
+    expect(result[0].reliable).toBe(true);
+    expect(result[0].cramersV).toBeGreaterThan(0.9);
+  });
+
+  it("flags a small-sample contingency table as unreliable", () => {
+    const dataset: ParsedDataset = {
+      columns: ["그룹", "결과"],
+      rows: [
+        { 그룹: "A", 결과: "성공" },
+        { 그룹: "A", 결과: "실패" },
+        { 그룹: "B", 결과: "성공" },
+        { 그룹: "B", 결과: "실패" },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = generateCategoricalCorrelationSummary(dataset, schema);
+
+    expect(result[0].reliable).toBe(false);
+    expect(result[0].interpretation).toBe("표본이 작아 참고용");
+  });
+
+  it("returns an empty array when fewer than two categorical columns exist", () => {
+    const dataset: ParsedDataset = {
+      columns: ["금액"],
+      rows: [{ 금액: 1 }, { 금액: 2 }],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = generateCategoricalCorrelationSummary(dataset, schema);
+
+    expect(result).toEqual([]);
   });
 });

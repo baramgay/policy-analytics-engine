@@ -1,6 +1,11 @@
 // 수치형 컬럼 쌍별 Pearson 상관계수를 직접 계산한다 (외부 통계 라이브러리 미사용)
-import type { CorrelationPair, ParsedDataset, SchemaSummary } from "@/types/analysis";
-import { tTestPValue } from "./statUtils";
+import type {
+  CategoricalCorrelationPair,
+  CorrelationPair,
+  ParsedDataset,
+  SchemaSummary,
+} from "@/types/analysis";
+import { tTestPValue, chiSquarePValue } from "./statUtils";
 
 const SIGNIFICANCE_LEVEL = 0.05;
 
@@ -87,4 +92,101 @@ export function generateCorrelationSummary(
   }
 
   return pairs.sort((a, b) => Math.abs(b.coefficient) - Math.abs(a.coefficient));
+}
+
+export function generateCategoricalCorrelationSummary(
+  dataset: ParsedDataset,
+  schema: SchemaSummary
+): CategoricalCorrelationPair[] {
+  const categoricalColumns = schema.columns.filter(
+    (c) => c.type === "categorical" || c.type === "boolean"
+  );
+  const pairs: CategoricalCorrelationPair[] = [];
+
+  for (let i = 0; i < categoricalColumns.length; i++) {
+    for (let j = i + 1; j < categoricalColumns.length; j++) {
+      const columnA = categoricalColumns[i].name;
+      const columnB = categoricalColumns[j].name;
+
+      const rowLabels = new Set<string>();
+      const colLabels = new Set<string>();
+      const pairCounts = new Map<string, number>();
+      let total = 0;
+
+      for (const row of dataset.rows) {
+        const a = row[columnA];
+        const b = row[columnB];
+        if (a === null || b === null) continue;
+        const rowLabel = String(a);
+        const colLabel = String(b);
+        rowLabels.add(rowLabel);
+        colLabels.add(colLabel);
+        const key = `${rowLabel} ${colLabel}`;
+        pairCounts.set(key, (pairCounts.get(key) ?? 0) + 1);
+        total += 1;
+      }
+
+      if (total === 0 || rowLabels.size < 2 || colLabels.size < 2) continue;
+
+      const rows = Array.from(rowLabels);
+      const cols = Array.from(colLabels);
+      const rowTotals = new Map<string, number>();
+      const colTotals = new Map<string, number>();
+      for (const rowLabel of rows) {
+        let sum = 0;
+        for (const colLabel of cols) {
+          sum += pairCounts.get(`${rowLabel} ${colLabel}`) ?? 0;
+        }
+        rowTotals.set(rowLabel, sum);
+      }
+      for (const colLabel of cols) {
+        let sum = 0;
+        for (const rowLabel of rows) {
+          sum += pairCounts.get(`${rowLabel} ${colLabel}`) ?? 0;
+        }
+        colTotals.set(colLabel, sum);
+      }
+
+      let chiSquare = 0;
+      let lowExpectedCellCount = 0;
+      const totalCells = rows.length * cols.length;
+      for (const rowLabel of rows) {
+        for (const colLabel of cols) {
+          const observed = pairCounts.get(`${rowLabel} ${colLabel}`) ?? 0;
+          const expected = (rowTotals.get(rowLabel)! * colTotals.get(colLabel)!) / total;
+          if (expected < 5) lowExpectedCellCount += 1;
+          if (expected > 0) {
+            chiSquare += (observed - expected) ** 2 / expected;
+          }
+        }
+      }
+
+      const df = (rows.length - 1) * (cols.length - 1);
+      const pValue = Number(chiSquarePValue(chiSquare, df).toFixed(4));
+      const significant = pValue < SIGNIFICANCE_LEVEL;
+      const minDimension = Math.min(rows.length - 1, cols.length - 1);
+      const cramersV =
+        minDimension === 0
+          ? 0
+          : Number(Math.sqrt(chiSquare / (total * minDimension)).toFixed(3));
+      const reliable = lowExpectedCellCount / totalCells <= 0.2;
+
+      pairs.push({
+        columnA,
+        columnB,
+        chiSquare: Number(chiSquare.toFixed(3)),
+        pValue,
+        significant,
+        cramersV,
+        reliable,
+        interpretation: !reliable
+          ? "표본이 작아 참고용"
+          : significant
+            ? `카이제곱=${chiSquare.toFixed(2)}, p=${pValue}로 통계적으로 유의한 연관성(Cramér's V=${cramersV})`
+            : `카이제곱=${chiSquare.toFixed(2)}, p=${pValue}로 통계적으로 유의한 연관성 없음`,
+      });
+    }
+  }
+
+  return pairs;
 }

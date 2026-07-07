@@ -109,6 +109,17 @@ export interface CorrelationPair {
   interpretation: string;
 }
 
+export interface CategoricalCorrelationPair {
+  columnA: string;
+  columnB: string;
+  chiSquare: number;
+  pValue: number;
+  significant: boolean;
+  cramersV: number;
+  reliable: boolean;
+  interpretation: string;
+}
+
 export interface OutlierColumnInfo {
   column: string;
   lowerBound: number;
@@ -162,6 +173,7 @@ export interface AnalysisResult {
   insightSummary: string;
   generatedAt: string;
   correlationSummary?: CorrelationPair[];
+  categoricalCorrelationSummary?: CategoricalCorrelationPair[];
   outlierSummary?: OutlierColumnInfo[];
   groupComparisonSummary?: GroupComparisonResult[];
   timeSeriesSummary?: TimeSeriesAnalysis[];
