@@ -112,4 +112,23 @@ describe("generateCorrelationSummary", () => {
 
     expect(result[0].significant).toBe(false);
   });
+
+  it("formats a perfect correlation's p-value as p<0.001 instead of p=0", () => {
+    const dataset: ParsedDataset = {
+      columns: ["금액", "수량"],
+      rows: [
+        { 금액: 1, 수량: 2 },
+        { 금액: 2, 수량: 4 },
+        { 금액: 3, 수량: 6 },
+        { 금액: 4, 수량: 8 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = generateCorrelationSummary(dataset, schema);
+
+    expect(result[0].pValue).toBe(0);
+    expect(result[0].interpretation).toContain("p<0.001");
+    expect(result[0].interpretation).not.toContain("p=0으로");
+  });
 });

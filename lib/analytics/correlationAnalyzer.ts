@@ -71,6 +71,7 @@ export function generateCorrelationSummary(
       const pValue = Number(rawPValue.toFixed(4));
       const significant = pValue < SIGNIFICANCE_LEVEL;
       const strength = classifyStrength(coefficient);
+      const pText = pValue < 0.001 ? "p<0.001" : `p=${pValue.toFixed(4)}`;
       pairs.push({
         columnA,
         columnB,
@@ -79,8 +80,8 @@ export function generateCorrelationSummary(
         pValue,
         significant,
         interpretation: significant
-          ? `상관계수 ${coefficient}, p=${pValue}로 통계적으로 유의한 ${strength} ${coefficient >= 0 ? "양" : "음"}의 상관관계`
-          : `상관계수 ${coefficient}, p=${pValue}로 통계적으로 유의하지 않음`,
+          ? `상관계수 ${coefficient}, ${pText}로 통계적으로 유의한 ${strength} ${coefficient >= 0 ? "양" : "음"}의 상관관계`
+          : `상관계수 ${coefficient}, ${pText}로 통계적으로 유의하지 않음`,
       });
     }
   }
