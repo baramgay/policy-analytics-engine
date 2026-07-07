@@ -179,4 +179,39 @@ describe("generateCategoricalCorrelationSummary", () => {
 
     expect(result).toEqual([]);
   });
+
+  it("formats a strong association's p-value as p<0.001 instead of p=0", () => {
+    const rows = [
+      ...Array.from({ length: 30 }, () => ({ 그룹: "A", 결과: "성공" })),
+      ...Array.from({ length: 30 }, () => ({ 그룹: "B", 결과: "실패" })),
+    ];
+    const dataset: ParsedDataset = { columns: ["그룹", "결과"], rows };
+    const schema = profileSchema(dataset);
+
+    const result = generateCategoricalCorrelationSummary(dataset, schema);
+
+    expect(result[0].significant).toBe(true);
+    expect(result[0].interpretation).toContain("p<0.001");
+    expect(result[0].interpretation).not.toContain("p=0으로");
+  });
+
+  it("keeps contingency table cells distinct when category values contain spaces", () => {
+    // 그룹="A B"+결과="C" 와 그룹="A"+결과="B C" 는 공백으로 단순 결합하면 같은 키("A B C")로 충돌한다.
+    const rows = [
+      ...Array.from({ length: 8 }, () => ({ 그룹: "A B", 결과: "C" })),
+      ...Array.from({ length: 4 }, () => ({ 그룹: "A B", 결과: "B C" })),
+      ...Array.from({ length: 4 }, () => ({ 그룹: "A", 결과: "C" })),
+      ...Array.from({ length: 12 }, () => ({ 그룹: "A", 결과: "B C" })),
+    ];
+    const dataset: ParsedDataset = { columns: ["그룹", "결과"], rows };
+    const schema = profileSchema(dataset);
+
+    const result = generateCategoricalCorrelationSummary(dataset, schema);
+
+    expect(result).toHaveLength(1);
+    // 올바른 분할표 기준 카이제곱 ≈ 4.861, Cramér's V ≈ 0.417.
+    // 공백 결합 키 충돌 버그가 있으면 두 셀이 합산되어 값이 크게 달라진다 (카이제곱 ≈ 26.7).
+    expect(result[0].chiSquare).toBeCloseTo(4.861, 2);
+    expect(result[0].cramersV).toBeCloseTo(0.417, 2);
+  });
 });

@@ -121,7 +121,7 @@ export function generateCategoricalCorrelationSummary(
         const colLabel = String(b);
         rowLabels.add(rowLabel);
         colLabels.add(colLabel);
-        const key = `${rowLabel} ${colLabel}`;
+        const key = JSON.stringify([rowLabel, colLabel]);
         pairCounts.set(key, (pairCounts.get(key) ?? 0) + 1);
         total += 1;
       }
@@ -135,14 +135,14 @@ export function generateCategoricalCorrelationSummary(
       for (const rowLabel of rows) {
         let sum = 0;
         for (const colLabel of cols) {
-          sum += pairCounts.get(`${rowLabel} ${colLabel}`) ?? 0;
+          sum += pairCounts.get(JSON.stringify([rowLabel, colLabel])) ?? 0;
         }
         rowTotals.set(rowLabel, sum);
       }
       for (const colLabel of cols) {
         let sum = 0;
         for (const rowLabel of rows) {
-          sum += pairCounts.get(`${rowLabel} ${colLabel}`) ?? 0;
+          sum += pairCounts.get(JSON.stringify([rowLabel, colLabel])) ?? 0;
         }
         colTotals.set(colLabel, sum);
       }
@@ -152,7 +152,7 @@ export function generateCategoricalCorrelationSummary(
       const totalCells = rows.length * cols.length;
       for (const rowLabel of rows) {
         for (const colLabel of cols) {
-          const observed = pairCounts.get(`${rowLabel} ${colLabel}`) ?? 0;
+          const observed = pairCounts.get(JSON.stringify([rowLabel, colLabel])) ?? 0;
           const expected = (rowTotals.get(rowLabel)! * colTotals.get(colLabel)!) / total;
           if (expected < 5) lowExpectedCellCount += 1;
           if (expected > 0) {
@@ -170,6 +170,7 @@ export function generateCategoricalCorrelationSummary(
           ? 0
           : Number(Math.sqrt(chiSquare / (total * minDimension)).toFixed(3));
       const reliable = lowExpectedCellCount / totalCells <= 0.2;
+      const pText = pValue < 0.001 ? "p<0.001" : `p=${pValue.toFixed(4)}`;
 
       pairs.push({
         columnA,
@@ -182,8 +183,8 @@ export function generateCategoricalCorrelationSummary(
         interpretation: !reliable
           ? "표본이 작아 참고용"
           : significant
-            ? `카이제곱=${chiSquare.toFixed(2)}, p=${pValue}로 통계적으로 유의한 연관성(Cramér's V=${cramersV})`
-            : `카이제곱=${chiSquare.toFixed(2)}, p=${pValue}로 통계적으로 유의한 연관성 없음`,
+            ? `카이제곱=${chiSquare.toFixed(2)}, ${pText}로 통계적으로 유의한 연관성(Cramér's V=${cramersV})`
+            : `카이제곱=${chiSquare.toFixed(2)}, ${pText}로 통계적으로 유의한 연관성 없음`,
       });
     }
   }
