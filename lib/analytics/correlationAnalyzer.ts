@@ -1,5 +1,8 @@
 // 수치형 컬럼 쌍별 Pearson 상관계수를 직접 계산한다 (외부 통계 라이브러리 미사용)
 import type { CorrelationPair, ParsedDataset, SchemaSummary } from "@/types/analysis";
+import { tTestPValue } from "./statUtils";
+
+const SIGNIFICANCE_LEVEL = 0.05;
 
 function pearsonCoefficient(x: number[], y: number[]): number {
   const n = x.length;
@@ -57,11 +60,27 @@ export function generateCorrelationSummary(
       if (xs.length < 2) continue;
 
       const coefficient = Number(pearsonCoefficient(xs, ys).toFixed(3));
+      const df = xs.length - 2;
+      let rawPValue = 1;
+      if (Math.abs(coefficient) >= 1) {
+        rawPValue = 0;
+      } else if (df > 0) {
+        const t = Math.abs(coefficient) * Math.sqrt(df / (1 - coefficient * coefficient));
+        rawPValue = tTestPValue(t, df);
+      }
+      const pValue = Number(rawPValue.toFixed(4));
+      const significant = pValue < SIGNIFICANCE_LEVEL;
+      const strength = classifyStrength(coefficient);
       pairs.push({
         columnA,
         columnB,
         coefficient,
-        strength: classifyStrength(coefficient),
+        strength,
+        pValue,
+        significant,
+        interpretation: significant
+          ? `상관계수 ${coefficient}, p=${pValue}로 통계적으로 유의한 ${strength} ${coefficient >= 0 ? "양" : "음"}의 상관관계`
+          : `상관계수 ${coefficient}, p=${pValue}로 통계적으로 유의하지 않음`,
       });
     }
   }

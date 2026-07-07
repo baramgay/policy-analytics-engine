@@ -104,6 +104,9 @@ export interface CorrelationPair {
   columnB: string;
   coefficient: number;
   strength: "매우 강함" | "강함" | "보통" | "약함" | "거의 없음";
+  pValue: number;
+  significant: boolean;
+  interpretation: string;
 }
 
 export interface OutlierColumnInfo {

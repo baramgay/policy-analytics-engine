@@ -75,4 +75,41 @@ describe("generateCorrelationSummary", () => {
     expect(abPair?.coefficient).toBe(1);
     expect(Math.abs(result[0].coefficient)).toBeGreaterThanOrEqual(Math.abs(result[1].coefficient));
   });
+
+  it("marks a strong correlation from enough samples as statistically significant", () => {
+    const dataset: ParsedDataset = {
+      columns: ["금액", "수량"],
+      rows: [
+        { 금액: 1, 수량: 2.1 },
+        { 금액: 2, 수량: 3.9 },
+        { 금액: 3, 수량: 6.2 },
+        { 금액: 4, 수량: 7.8 },
+        { 금액: 5, 수량: 10.1 },
+        { 금액: 6, 수량: 11.9 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = generateCorrelationSummary(dataset, schema);
+
+    expect(result[0].significant).toBe(true);
+    expect(result[0].pValue).toBeLessThan(0.05);
+    expect(result[0].interpretation).toContain("유의한");
+  });
+
+  it("marks a weak correlation from a small sample as not statistically significant", () => {
+    const dataset: ParsedDataset = {
+      columns: ["금액", "임의값"],
+      rows: [
+        { 금액: 1, 임의값: 5 },
+        { 금액: 2, 임의값: 3 },
+        { 금액: 3, 임의값: 6 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = generateCorrelationSummary(dataset, schema);
+
+    expect(result[0].significant).toBe(false);
+  });
 });
