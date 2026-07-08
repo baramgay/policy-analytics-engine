@@ -168,6 +168,8 @@ export interface TimeSeriesAnalysis {
   trendIntercept: number;
   trendDirection: "증가" | "감소" | "보합";
   points: TimeSeriesPoint[];
+  momChange: number | null;
+  yoyChange: number | null;
 }
 
 export interface AnalysisResult {
