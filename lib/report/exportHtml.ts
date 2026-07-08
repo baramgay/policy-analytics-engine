@@ -120,6 +120,12 @@ export function buildReportHtml(meta: ProjectMeta, analysis: AnalysisResult): st
   .top-value-ratio { font-size: 12px; color: #5a5f66; min-width: 32px; }
   .insight { white-space: pre-wrap; background: #fafbfc; border: 1px solid #eceef1; border-radius: 6px; padding: 16px; }
   .footer { margin-top: 32px; color: #9aa0a8; font-size: 12px; text-align: right; }
+  @media print {
+    body { background: #fff; color: #000; font-size: 11pt; }
+    h1, h2 { break-after: avoid; }
+    table, li { break-inside: avoid; }
+  }
+  @page { margin: 18mm; }
 </style>
 </head>
 <body>
