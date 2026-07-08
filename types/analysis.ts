@@ -157,7 +157,7 @@ export interface GroupComparisonResult {
   statistic: number;
   pValue: number;
   significant: boolean;
-  groupMeans: { group: string; mean: number; count: number }[];
+  groupMeans: { group: string; mean: number; count: number; sd: number }[];
   effectSize: EffectSize | null;
   interpretation: string;
 }

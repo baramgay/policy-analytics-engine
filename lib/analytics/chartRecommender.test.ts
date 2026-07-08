@@ -96,8 +96,8 @@ describe("recommendCharts", () => {
         pValue: 0.01,
         significant: true,
         groupMeans: [
-          { group: "남", mean: 100, count: 1 },
-          { group: "여", mean: 200, count: 1 },
+          { group: "남", mean: 100, count: 1, sd: 0 },
+          { group: "여", mean: 200, count: 1, sd: 0 },
         ],
         effectSize: null,
         interpretation: "",
@@ -116,6 +116,95 @@ describe("recommendCharts", () => {
     expect(groupedChart).toBeDefined();
     expect(groupedChart?.xKey).toBe("성별");
     expect(groupedChart?.data).toHaveLength(2);
+  });
+
+  it("recommends a bar chart with sd error bars for the first significant group comparison", () => {
+    const dataset: ParsedDataset = {
+      columns: ["성별", "지출액"],
+      rows: [
+        { 성별: "남", 지출액: 100 },
+        { 성별: "여", 지출액: 200 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+    const numericSummary = generateNumericSummary(dataset, schema);
+    const categoricalSummary = generateCategoricalSummary(dataset, schema);
+    const groupComparisonSummary = [
+      {
+        groupColumn: "성별",
+        numericColumn: "지출액",
+        method: "welch-t" as const,
+        groupCount: 2,
+        statistic: -5,
+        pValue: 0.01,
+        significant: true,
+        groupMeans: [
+          { group: "남", mean: 100, count: 1, sd: 0 },
+          { group: "여", mean: 200, count: 1, sd: 0 },
+        ],
+        effectSize: null,
+        interpretation: "p=0.0100로 유의함",
+      },
+    ];
+
+    const result = recommendCharts(
+      dataset,
+      schema,
+      numericSummary,
+      categoricalSummary,
+      groupComparisonSummary
+    );
+
+    const errorBarChart = result.find((spec) => spec.errorKey === "sd");
+    expect(errorBarChart).toBeDefined();
+    expect(errorBarChart?.type).toBe("bar");
+    expect(errorBarChart?.xKey).toBe("group");
+    expect(errorBarChart?.yKey).toBe("mean");
+    expect(errorBarChart?.subtitle).toBe("p=0.0100로 유의함");
+    expect(errorBarChart?.data).toEqual([
+      { group: "남", mean: 100, sd: 0 },
+      { group: "여", mean: 200, sd: 0 },
+    ]);
+  });
+
+  it("skips the sd error-bar bar chart when no group comparison is significant", () => {
+    const dataset: ParsedDataset = {
+      columns: ["성별", "지출액"],
+      rows: [
+        { 성별: "남", 지출액: 100 },
+        { 성별: "여", 지출액: 105 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+    const numericSummary = generateNumericSummary(dataset, schema);
+    const categoricalSummary = generateCategoricalSummary(dataset, schema);
+    const groupComparisonSummary = [
+      {
+        groupColumn: "성별",
+        numericColumn: "지출액",
+        method: "welch-t" as const,
+        groupCount: 2,
+        statistic: -0.5,
+        pValue: 0.8,
+        significant: false,
+        groupMeans: [
+          { group: "남", mean: 100, count: 1, sd: 0 },
+          { group: "여", mean: 105, count: 1, sd: 0 },
+        ],
+        effectSize: null,
+        interpretation: "",
+      },
+    ];
+
+    const result = recommendCharts(
+      dataset,
+      schema,
+      numericSummary,
+      categoricalSummary,
+      groupComparisonSummary
+    );
+
+    expect(result.find((spec) => spec.errorKey === "sd")).toBeUndefined();
   });
 
   it("returns an empty array when the dataset has neither numeric nor categorical columns", () => {

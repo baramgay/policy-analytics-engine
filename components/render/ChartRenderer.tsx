@@ -6,6 +6,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  ErrorBar,
   Line,
   LineChart,
   Pie,
@@ -44,7 +45,11 @@ export function ChartRenderer({ spec }: { spec: ChartSpec }) {
             dataKey={spec.yKey}
             fill={spec.type === "grouped-bar" ? "#10b981" : "#3b82f6"}
             radius={[4, 4, 0, 0]}
-          />
+          >
+            {spec.errorKey ? (
+              <ErrorBar dataKey={spec.errorKey} width={4} strokeWidth={1.5} stroke="#6b7280" />
+            ) : null}
+          </Bar>
         </BarChart>
       ) : spec.type === "line" ? (
         <LineChart data={spec.data}>

@@ -169,6 +169,26 @@ export function recommendCharts(
     });
   }
 
+  if (groupComparisonSummary && groupComparisonSummary.length > 0) {
+    const firstSignificant = groupComparisonSummary.find((g) => g.significant);
+    if (firstSignificant) {
+      specs.push({
+        id: `errorbar-${firstSignificant.groupColumn}-${firstSignificant.numericColumn}`,
+        type: "bar",
+        title: `${firstSignificant.groupColumn}별 ${firstSignificant.numericColumn} 평균 비교 (오차막대)`,
+        xKey: "group",
+        yKey: "mean",
+        errorKey: "sd",
+        data: firstSignificant.groupMeans.map((g) => ({
+          group: g.group,
+          mean: Number(g.mean.toFixed(2)),
+          sd: Number(g.sd.toFixed(2)),
+        })),
+        subtitle: firstSignificant.interpretation,
+      });
+    }
+  }
+
   if (correlationSummary && correlationSummary.length > 0) {
     const significantPairs = correlationSummary
       .filter((pair) => pair.significant)

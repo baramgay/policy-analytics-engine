@@ -130,6 +130,26 @@ describe("generateGroupComparisonSummary", () => {
     expect(result[0].effectSize?.magnitude).toBe("큼");
   });
 
+  it("computes the sample standard deviation (n-1) for each group mean", () => {
+    const dataset: ParsedDataset = {
+      columns: ["구분", "값"],
+      rows: [
+        { 구분: "A", 값: 2 },
+        { 구분: "A", 값: 4 },
+        { 구분: "A", 값: 6 },
+        { 구분: "B", 값: 20 },
+        { 구분: "B", 값: 22 },
+        { 구분: "B", 값: 24 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = generateGroupComparisonSummary(dataset, schema);
+
+    const groupA = result[0].groupMeans.find((g) => g.group === "A");
+    expect(groupA?.sd).toBeCloseTo(2, 5);
+  });
+
   it("flags a small effect size despite statistical significance in a large sample", () => {
     const groupA = Array.from({ length: 1000 }, (_, i) => (i % 2 === 0 ? 99.5 : 100.5));
     const groupB = Array.from({ length: 1000 }, (_, i) => (i % 2 === 0 ? 99.6 : 100.6));

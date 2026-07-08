@@ -146,11 +146,15 @@ export function generateGroupComparisonSummary(
       );
       if (validGroups.length < 2 || validGroups.length > MAX_GROUP_COUNT) continue;
 
-      const groupMeans = validGroups.map(([group, values]) => ({
-        group,
-        mean: Number(mean(values).toFixed(2)),
-        count: values.length,
-      }));
+      const groupMeans = validGroups.map(([group, values]) => {
+        const groupMean = mean(values);
+        return {
+          group,
+          mean: Number(groupMean.toFixed(2)),
+          count: values.length,
+          sd: Number(Math.sqrt(variance(values, groupMean)).toFixed(2)),
+        };
+      });
 
       if (validGroups.length === 2) {
         const [a, b] = validGroups.map(([, values]) => values);
