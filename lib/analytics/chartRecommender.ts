@@ -1,12 +1,59 @@
-// 스키마·통계 결과를 근거로 표현 가능한 차트(Bar/Line/Pie/Grouped-Bar)를 규칙 기반으로 추천한다
+// 스키마·통계 결과를 근거로 표현 가능한 차트(Bar/Line/Pie/Grouped-Bar/Scatter)를 규칙 기반으로 추천한다
 import type {
   CategoricalColumnStats,
   ChartSpec,
+  CorrelationPair,
   GroupComparisonResult,
   NumericColumnStats,
   ParsedDataset,
   SchemaSummary,
 } from "@/types/analysis";
+
+const SCATTER_MAX_POINTS = 300;
+
+function buildScatterSpec(dataset: ParsedDataset, pair: CorrelationPair): ChartSpec | null {
+  const { columnA, columnB } = pair;
+  const rawPoints: { x: number; y: number }[] = [];
+  for (const row of dataset.rows) {
+    const x = row[columnA];
+    const y = row[columnB];
+    if (typeof x === "number" && typeof y === "number") {
+      rawPoints.push({ x, y });
+    }
+  }
+  if (rawPoints.length < 3) return null;
+
+  const step = Math.max(1, Math.ceil(rawPoints.length / SCATTER_MAX_POINTS));
+  const points = rawPoints.filter((_, index) => index % step === 0);
+
+  const n = points.length;
+  const meanX = points.reduce((sum, p) => sum + p.x, 0) / n;
+  const meanY = points.reduce((sum, p) => sum + p.y, 0) / n;
+  const sxx = points.reduce((sum, p) => sum + (p.x - meanX) * (p.x - meanX), 0);
+  const sxy = points.reduce((sum, p) => sum + (p.x - meanX) * (p.y - meanY), 0);
+
+  const trendLine =
+    sxx === 0
+      ? null
+      : (() => {
+          const slope = sxy / sxx;
+          const intercept = meanY - slope * meanX;
+          return { slope, intercept };
+        })();
+
+  const pText = pair.pValue < 0.001 ? "p<0.001" : `p=${pair.pValue.toFixed(4)}`;
+
+  return {
+    id: `scatter-${columnA}-${columnB}`,
+    type: "scatter",
+    title: `${columnA}과(와) ${columnB}의 관계`,
+    xKey: columnA,
+    yKey: columnB,
+    data: points.map((p) => ({ [columnA]: p.x, [columnB]: p.y })),
+    subtitle: `상관계수 ${pair.coefficient.toFixed(2)}, ${pText} (유의)`,
+    trendLine,
+  };
+}
 
 function buildTimeSeries(
   dataset: ParsedDataset,
@@ -37,7 +84,8 @@ export function recommendCharts(
   schema: SchemaSummary,
   numericSummary: NumericColumnStats[],
   categoricalSummary: CategoricalColumnStats[],
-  groupComparisonSummary?: GroupComparisonResult[]
+  groupComparisonSummary?: GroupComparisonResult[],
+  correlationSummary?: CorrelationPair[]
 ): ChartSpec[] {
   const specs: ChartSpec[] = [];
   const dateColumn = schema.columns.find((c) => c.type === "date");
@@ -110,6 +158,19 @@ export function recommendCharts(
         count: g.count,
       })),
     });
+  }
+
+  if (correlationSummary && correlationSummary.length > 0) {
+    const significantPairs = correlationSummary
+      .filter((pair) => pair.significant)
+      .sort((a, b) => Math.abs(b.coefficient) - Math.abs(a.coefficient));
+    const topPair = significantPairs[0];
+    if (topPair) {
+      const scatterSpec = buildScatterSpec(dataset, topPair);
+      if (scatterSpec) {
+        specs.push(scatterSpec);
+      }
+    }
   }
 
   return specs;

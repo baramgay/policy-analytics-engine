@@ -10,7 +10,10 @@ import {
   LineChart,
   Pie,
   PieChart,
+  ReferenceLine,
   ResponsiveContainer,
+  Scatter,
+  ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
@@ -27,6 +30,21 @@ const PIE_COLORS = [
   "#ec4899",
   "#84cc16",
 ];
+
+function buildTrendSegment(
+  spec: ChartSpec
+): readonly [{ x: number; y: number }, { x: number; y: number }] {
+  const { slope, intercept } = spec.trendLine ?? { slope: 0, intercept: 0 };
+  const xValues = spec.data
+    .map((row) => row[spec.xKey])
+    .filter((v): v is number => typeof v === "number");
+  const minX = Math.min(...xValues);
+  const maxX = Math.max(...xValues);
+  return [
+    { x: minX, y: slope * minX + intercept },
+    { x: maxX, y: slope * maxX + intercept },
+  ] as const;
+}
 
 export function ChartRenderer({ spec }: { spec: ChartSpec }) {
   return (
@@ -51,6 +69,34 @@ export function ChartRenderer({ spec }: { spec: ChartSpec }) {
           <Tooltip />
           <Line type="monotone" dataKey={spec.yKey} stroke="#3b82f6" strokeWidth={2} dot={false} />
         </LineChart>
+      ) : spec.type === "scatter" ? (
+        <ScatterChart>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <XAxis
+            type="number"
+            dataKey={spec.xKey}
+            domain={["auto", "auto"]}
+            tick={{ fontSize: 12 }}
+            name={spec.xKey}
+          />
+          <YAxis
+            type="number"
+            dataKey={spec.yKey}
+            domain={["auto", "auto"]}
+            tick={{ fontSize: 12 }}
+            name={spec.yKey}
+          />
+          <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+          <Scatter data={spec.data} fill="#3b82f6" fillOpacity={0.7} />
+          {spec.trendLine ? (
+            <ReferenceLine
+              segment={buildTrendSegment(spec)}
+              stroke="#ef4444"
+              strokeDasharray="6 4"
+              strokeWidth={1.5}
+            />
+          ) : null}
+        </ScatterChart>
       ) : (
         <PieChart>
           <Tooltip />

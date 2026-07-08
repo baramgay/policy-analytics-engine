@@ -31,7 +31,8 @@ export function runAnalysis(dataset: ParsedDataset): AnalysisResult {
     schemaSummary,
     numericSummary,
     categoricalSummary,
-    groupComparisonSummary
+    groupComparisonSummary,
+    correlationSummary
   );
   const mapSpecs = detectMap(dataset, schemaSummary);
   const qualityScore = computeQualityScore(missingSummary, schemaSummary.rowCount);

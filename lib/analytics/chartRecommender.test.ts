@@ -5,7 +5,7 @@ import {
   generateCategoricalSummary,
   generateNumericSummary,
 } from "@/lib/analytics/statsGenerator";
-import type { ParsedDataset } from "@/types/analysis";
+import type { CorrelationPair, ParsedDataset } from "@/types/analysis";
 
 describe("recommendCharts", () => {
   it("recommends a line chart when the dataset has both a date column and a numeric column", () => {
@@ -134,5 +134,46 @@ describe("recommendCharts", () => {
     const result = recommendCharts(dataset, schema, numericSummary, categoricalSummary);
 
     expect(result).toEqual([]);
+  });
+
+  it("recommends a scatter chart with a trend line for the most significant correlation pair", () => {
+    const rows = Array.from({ length: 30 }, (_, i) => ({
+      광고비: i,
+      매출액: i * 25 + (i % 3),
+    }));
+    const dataset: ParsedDataset = {
+      columns: ["광고비", "매출액"],
+      rows,
+    };
+    const schema = profileSchema(dataset);
+    const numericSummary = generateNumericSummary(dataset, schema);
+    const categoricalSummary = generateCategoricalSummary(dataset, schema);
+    const correlationSummary: CorrelationPair[] = [
+      {
+        columnA: "광고비",
+        columnB: "매출액",
+        coefficient: 0.99,
+        strength: "매우 강함",
+        pValue: 0.0001,
+        significant: true,
+        interpretation: "상관계수 0.99, p<0.001로 통계적으로 유의한 매우 강함 양의 상관관계",
+      },
+    ];
+
+    const result = recommendCharts(
+      dataset,
+      schema,
+      numericSummary,
+      categoricalSummary,
+      undefined,
+      correlationSummary
+    );
+
+    const scatterChart = result.find((spec) => spec.type === "scatter");
+    expect(scatterChart).toBeDefined();
+    expect(scatterChart?.trendLine?.slope).toBeGreaterThan(24);
+    expect(scatterChart?.trendLine?.slope).toBeLessThan(26);
+    expect(scatterChart?.subtitle).toContain("상관계수");
+    expect(scatterChart?.data.length).toBeLessThanOrEqual(300);
   });
 });

@@ -65,7 +65,7 @@ export interface CategoricalColumnStats {
   topValues: { value: string; count: number; ratio: number }[];
 }
 
-export type ChartType = "bar" | "line" | "pie" | "grouped-bar";
+export type ChartType = "bar" | "line" | "pie" | "grouped-bar" | "scatter";
 
 export interface ChartSpec {
   id: string;
@@ -74,6 +74,9 @@ export interface ChartSpec {
   xKey: string;
   yKey: string;
   data: Record<string, string | number>[];
+  subtitle?: string;
+  trendLine?: { slope: number; intercept: number } | null;
+  errorKey?: string;
 }
 
 export interface MapPoint {
