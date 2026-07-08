@@ -155,22 +155,26 @@ export function recommendCharts(
 
   if (groupComparisonSummary && groupComparisonSummary.length > 0) {
     const mostSignificant = [...groupComparisonSummary].sort((a, b) => a.pValue - b.pValue)[0];
-    specs.push({
-      id: `grouped-${mostSignificant.groupColumn}-${mostSignificant.numericColumn}`,
-      type: "grouped-bar",
-      title: `${mostSignificant.groupColumn}별 ${mostSignificant.numericColumn} 그룹 비교`,
-      xKey: mostSignificant.groupColumn,
-      yKey: "mean",
-      data: mostSignificant.groupMeans.map((g) => ({
-        [mostSignificant.groupColumn]: g.group,
-        mean: g.mean,
-        count: g.count,
-      })),
-    });
-  }
-
-  if (groupComparisonSummary && groupComparisonSummary.length > 0) {
     const firstSignificant = groupComparisonSummary.find((g) => g.significant);
+    // firstSignificant가 mostSignificant와 동일한 그룹비교 대상이면 오차막대 버전이
+    // 이를 대체하므로, 정보가 중복되는 기존 grouped-bar는 건너뛴다.
+    const supersededByErrorBarChart = firstSignificant === mostSignificant;
+
+    if (!supersededByErrorBarChart) {
+      specs.push({
+        id: `grouped-${mostSignificant.groupColumn}-${mostSignificant.numericColumn}`,
+        type: "grouped-bar",
+        title: `${mostSignificant.groupColumn}별 ${mostSignificant.numericColumn} 그룹 비교`,
+        xKey: mostSignificant.groupColumn,
+        yKey: "mean",
+        data: mostSignificant.groupMeans.map((g) => ({
+          [mostSignificant.groupColumn]: g.group,
+          mean: g.mean,
+          count: g.count,
+        })),
+      });
+    }
+
     if (firstSignificant) {
       specs.push({
         id: `errorbar-${firstSignificant.groupColumn}-${firstSignificant.numericColumn}`,

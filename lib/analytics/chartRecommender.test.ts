@@ -75,12 +75,12 @@ describe("recommendCharts", () => {
     expect(secondBarChart?.xKey).toBe("성별");
   });
 
-  it("recommends a grouped-bar chart from the most significant group comparison result", () => {
+  it("falls back to a grouped-bar chart when no group comparison is significant", () => {
     const dataset: ParsedDataset = {
       columns: ["성별", "지출액"],
       rows: [
         { 성별: "남", 지출액: 100 },
-        { 성별: "여", 지출액: 200 },
+        { 성별: "여", 지출액: 105 },
       ],
     };
     const schema = profileSchema(dataset);
@@ -92,12 +92,12 @@ describe("recommendCharts", () => {
         numericColumn: "지출액",
         method: "welch-t" as const,
         groupCount: 2,
-        statistic: -5,
-        pValue: 0.01,
-        significant: true,
+        statistic: -0.5,
+        pValue: 0.8,
+        significant: false,
         groupMeans: [
           { group: "남", mean: 100, count: 1, sd: 0 },
-          { group: "여", mean: 200, count: 1, sd: 0 },
+          { group: "여", mean: 105, count: 1, sd: 0 },
         ],
         effectSize: null,
         interpretation: "",
@@ -116,6 +116,8 @@ describe("recommendCharts", () => {
     expect(groupedChart).toBeDefined();
     expect(groupedChart?.xKey).toBe("성별");
     expect(groupedChart?.data).toHaveLength(2);
+    // 유의하지 않으므로 오차막대 차트는 폴백 대상이 아니라 존재하지 않아야 한다.
+    expect(result.find((spec) => spec.errorKey === "sd")).toBeUndefined();
   });
 
   it("recommends a bar chart with sd error bars for the first significant group comparison", () => {
@@ -165,6 +167,55 @@ describe("recommendCharts", () => {
       { group: "남", mean: 100, sd: 0 },
       { group: "여", mean: 200, sd: 0 },
     ]);
+    // 동일한 그룹비교 대상에 대해 중복되는 grouped-bar 차트는 뜨지 않아야 한다.
+    expect(result.find((spec) => spec.type === "grouped-bar")).toBeUndefined();
+  });
+
+  it("does not render both a grouped-bar chart and an sd error-bar chart for the same single significant group comparison result", () => {
+    const dataset: ParsedDataset = {
+      columns: ["성별", "지출액"],
+      rows: [
+        { 성별: "남", 지출액: 100 },
+        { 성별: "여", 지출액: 200 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+    const numericSummary = generateNumericSummary(dataset, schema);
+    const categoricalSummary = generateCategoricalSummary(dataset, schema);
+    const groupComparisonSummary = [
+      {
+        groupColumn: "성별",
+        numericColumn: "지출액",
+        method: "welch-t" as const,
+        groupCount: 2,
+        statistic: -5,
+        pValue: 0.01,
+        significant: true,
+        groupMeans: [
+          { group: "남", mean: 100, count: 1, sd: 0 },
+          { group: "여", mean: 200, count: 1, sd: 0 },
+        ],
+        effectSize: null,
+        interpretation: "p=0.0100로 유의함",
+      },
+    ];
+
+    const result = recommendCharts(
+      dataset,
+      schema,
+      numericSummary,
+      categoricalSummary,
+      groupComparisonSummary
+    );
+
+    const similarCharts = result.filter(
+      (spec) => spec.type === "grouped-bar" || spec.errorKey === "sd"
+    );
+    // 성별x지출액 그룹비교가 1건뿐이고 유의하므로, 두 유사 차트 중
+    // 개선된 오차막대 버전 하나만 존재해야 한다.
+    expect(similarCharts).toHaveLength(1);
+    expect(similarCharts[0]?.type).toBe("bar");
+    expect(similarCharts[0]?.errorKey).toBe("sd");
   });
 
   it("skips the sd error-bar bar chart when no group comparison is significant", () => {
