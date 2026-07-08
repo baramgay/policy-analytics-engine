@@ -6,7 +6,11 @@ import { generateNumericSummary, generateCategoricalSummary } from "./statsGener
 import { recommendCharts } from "./chartRecommender";
 import { detectMap } from "./mapDetector";
 import { generateInsight } from "./insightGenerator";
-import { generateCorrelationSummary } from "./correlationAnalyzer";
+import {
+  generateCorrelationSummary,
+  generateCategoricalCorrelationSummary,
+  computeVif,
+} from "./correlationAnalyzer";
 import { detectOutliers } from "./outlierDetector";
 import { generateGroupComparisonSummary } from "./groupComparator";
 import { generateTimeSeriesSummary } from "./dateDetector";
@@ -17,6 +21,8 @@ export function runAnalysis(dataset: ParsedDataset): AnalysisResult {
   const numericSummary = generateNumericSummary(dataset, schemaSummary);
   const categoricalSummary = generateCategoricalSummary(dataset, schemaSummary);
   const correlationSummary = generateCorrelationSummary(dataset, schemaSummary);
+  const categoricalCorrelationSummary = generateCategoricalCorrelationSummary(dataset, schemaSummary);
+  const vifSummary = computeVif(dataset, schemaSummary);
   const outlierSummary = detectOutliers(dataset, schemaSummary);
   const groupComparisonSummary = generateGroupComparisonSummary(dataset, schemaSummary);
   const timeSeriesSummary = generateTimeSeriesSummary(dataset, schemaSummary);
@@ -48,6 +54,8 @@ export function runAnalysis(dataset: ParsedDataset): AnalysisResult {
     insightSummary,
     generatedAt: new Date().toISOString(),
     correlationSummary,
+    categoricalCorrelationSummary,
+    vifSummary,
     outlierSummary,
     groupComparisonSummary,
     timeSeriesSummary,

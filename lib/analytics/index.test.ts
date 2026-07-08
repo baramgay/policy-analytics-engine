@@ -3,8 +3,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { runAnalysis } from "@/lib/analytics/index";
 import { parseCsvText } from "@/lib/analytics/parser";
+import type { ParsedDataset } from "@/types/analysis";
 
-function loadSample(fileName: string): Promise<ReturnType<typeof parseCsvText>> {
+function loadSample(fileName: string): ReturnType<typeof parseCsvText> {
   const text = readFileSync(join(process.cwd(), "public", "sample-data", fileName), "utf-8");
   return parseCsvText(text);
 }
@@ -39,5 +40,28 @@ describe("runAnalysis integration", () => {
     expect(result.qualityScore).toBeGreaterThanOrEqual(0);
     expect(result.qualityScore).toBeLessThanOrEqual(100);
     expect(result.insightSummary.length).toBeGreaterThan(0);
+  });
+});
+
+describe("runAnalysis integration - extended statistical fields", () => {
+  it("surfaces all extended statistical fields across the full pipeline", () => {
+    const dataset: ParsedDataset = {
+      columns: ["날짜", "성별", "구매여부", "금액", "수량"],
+      rows: [
+        { 날짜: "2025-01-01", 성별: "남", 구매여부: "구매", 금액: 100, 수량: 2 },
+        { 날짜: "2025-02-01", 성별: "남", 구매여부: "구매", 금액: 110, 수량: 3 },
+        { 날짜: "2025-03-01", 성별: "여", 구매여부: "미구매", 금액: 500, 수량: 1 },
+        { 날짜: "2025-04-01", 성별: "여", 구매여부: "미구매", 금액: 520, 수량: 1 },
+        { 날짜: "2025-05-01", 성별: "남", 구매여부: "구매", 금액: 105, 수량: 2 },
+        { 날짜: "2025-06-01", 성별: "여", 구매여부: "미구매", 금액: 510, 수량: 1 },
+      ],
+    };
+    const result = runAnalysis(dataset);
+    expect(result.correlationSummary?.[0]).toHaveProperty("pValue");
+    expect(result.groupComparisonSummary?.[0]).toHaveProperty("effectSize");
+    expect(result.outlierSummary?.[0]).toHaveProperty("highConfidenceIndices");
+    expect(result.timeSeriesSummary?.[0]).toHaveProperty("momChange");
+    expect(result.categoricalCorrelationSummary).toBeDefined();
+    expect(result.vifSummary).toBeDefined();
   });
 });
