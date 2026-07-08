@@ -132,6 +132,8 @@ export interface OutlierColumnInfo {
   upperBound: number;
   outlierCount: number;
   outlierIndices: number[];
+  highConfidenceIndices: number[];
+  referenceIndices: number[];
 }
 
 export interface EffectSize {

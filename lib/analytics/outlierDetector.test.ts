@@ -48,4 +48,38 @@ describe("detectOutliers", () => {
 
     expect(result).toEqual([]);
   });
+
+  it("classifies a value flagged by both IQR and Z-score as high confidence", () => {
+    const normalValues = [10, 11, 12, 13, 12, 11, 10, 13, 12, 11, 12, 13, 10, 11, 12];
+    const dataset: ParsedDataset = {
+      columns: ["금액"],
+      rows: [...normalValues.map((v) => ({ 금액: v })), { 금액: 80 }],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = detectOutliers(dataset, schema);
+
+    expect(result[0].highConfidenceIndices).toEqual([15]);
+    expect(result[0].referenceIndices).toEqual([]);
+  });
+
+  it("classifies an extreme single-point outlier that skews the standard deviation as reference-only", () => {
+    const dataset: ParsedDataset = {
+      columns: ["금액"],
+      rows: [
+        { 금액: 10 },
+        { 금액: 12 },
+        { 금액: 11 },
+        { 금액: 13 },
+        { 금액: 12 },
+        { 금액: 1000 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = detectOutliers(dataset, schema);
+
+    expect(result[0].highConfidenceIndices).toEqual([]);
+    expect(result[0].referenceIndices).toEqual([5]);
+  });
 });
