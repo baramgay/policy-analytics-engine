@@ -18,6 +18,8 @@ import type {
 import { ChartRenderer } from "@/components/render/ChartRenderer";
 import { AnalysisMapClient } from "@/components/render/AnalysisMapClient";
 import { SimpleDataTable } from "@/components/render/SimpleDataTable";
+import { CorrelationHeatmap } from "@/components/render/CorrelationHeatmap";
+import { buildCorrelationMatrix } from "@/lib/analytics/heatmapMatrix";
 import { AiNarratorPanel } from "@/components/analysis/AiNarratorPanel";
 import {
   availableColumnTypes,
@@ -177,6 +179,10 @@ export function AnalysisDashboardTabs({ project }: { project: ProjectRecord }) {
     () => filterColumnsByType(columnOverview, columnTypeFilter),
     [columnOverview, columnTypeFilter]
   );
+  const correlationMatrix = useMemo(
+    () => buildCorrelationMatrix(analysis.correlationSummary ?? []),
+    [analysis.correlationSummary]
+  );
 
   return (
     <div>
@@ -270,7 +276,10 @@ export function AnalysisDashboardTabs({ project }: { project: ProjectRecord }) {
             <div>
               <Text type="label">상관관계 분석</Text>
               {analysis.correlationSummary && analysis.correlationSummary.length > 0 ? (
-                <SimpleDataTable columns={CORRELATION_COLUMNS} data={analysis.correlationSummary} />
+                <>
+                  <CorrelationHeatmap matrix={correlationMatrix} />
+                  <SimpleDataTable columns={CORRELATION_COLUMNS} data={analysis.correlationSummary} />
+                </>
               ) : (
                 <Text color="secondary">상관관계를 계산할 수치형 변수 쌍이 없습니다.</Text>
               )}
