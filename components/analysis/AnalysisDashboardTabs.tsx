@@ -132,7 +132,22 @@ const TIME_SERIES_COLUMNS: ColumnDef<TimeSeriesAnalysis>[] = [
     cell: (info) => (info.getValue() as number).toFixed(3),
   },
   { accessorKey: "trendDirection", header: "추세 방향" },
+  {
+    accessorKey: "momChange",
+    header: "전월대비",
+    cell: (info) => formatChangeRate(info.getValue() as number | null),
+  },
+  {
+    accessorKey: "yoyChange",
+    header: "전년동월대비",
+    cell: (info) => formatChangeRate(info.getValue() as number | null),
+  },
 ];
+
+function formatChangeRate(value: number | null): string {
+  if (value === null) return "산출 불가";
+  return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
+}
 
 const COLUMN_OVERVIEW_COLUMNS: ColumnDef<ColumnOverviewRow>[] = [
   { accessorKey: "name", header: "변수명" },
