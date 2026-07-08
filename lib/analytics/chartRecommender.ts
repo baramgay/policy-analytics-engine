@@ -23,14 +23,12 @@ function buildScatterSpec(dataset: ParsedDataset, pair: CorrelationPair): ChartS
   }
   if (rawPoints.length < 3) return null;
 
-  const step = Math.max(1, Math.ceil(rawPoints.length / SCATTER_MAX_POINTS));
-  const points = rawPoints.filter((_, index) => index % step === 0);
-
-  const n = points.length;
-  const meanX = points.reduce((sum, p) => sum + p.x, 0) / n;
-  const meanY = points.reduce((sum, p) => sum + p.y, 0) / n;
-  const sxx = points.reduce((sum, p) => sum + (p.x - meanX) * (p.x - meanX), 0);
-  const sxy = points.reduce((sum, p) => sum + (p.x - meanX) * (p.y - meanY), 0);
+  // 회귀계수는 다운샘플 이전의 전체 원본 데이터를 기준으로 계산한다 (편향 방지)
+  const n = rawPoints.length;
+  const meanX = rawPoints.reduce((sum, p) => sum + p.x, 0) / n;
+  const meanY = rawPoints.reduce((sum, p) => sum + p.y, 0) / n;
+  const sxx = rawPoints.reduce((sum, p) => sum + (p.x - meanX) * (p.x - meanX), 0);
+  const sxy = rawPoints.reduce((sum, p) => sum + (p.x - meanX) * (p.y - meanY), 0);
 
   const trendLine =
     sxx === 0
@@ -38,8 +36,19 @@ function buildScatterSpec(dataset: ParsedDataset, pair: CorrelationPair): ChartS
       : (() => {
           const slope = sxy / sxx;
           const intercept = meanY - slope * meanX;
-          return { slope, intercept };
+          const xValues = rawPoints.map((p) => p.x);
+          const minX = Math.min(...xValues);
+          const maxX = Math.max(...xValues);
+          const segment: readonly [{ x: number; y: number }, { x: number; y: number }] = [
+            { x: minX, y: slope * minX + intercept },
+            { x: maxX, y: slope * maxX + intercept },
+          ];
+          return { slope, intercept, segment };
         })();
+
+  // 렌더링용 점 배열만 균등 스트라이드로 다운샘플링한다 (회귀계수 계산과는 분리)
+  const step = Math.max(1, Math.ceil(rawPoints.length / SCATTER_MAX_POINTS));
+  const points = rawPoints.filter((_, index) => index % step === 0);
 
   const pText = pair.pValue < 0.001 ? "p<0.001" : `p=${pair.pValue.toFixed(4)}`;
 

@@ -204,6 +204,7 @@ export function AnalysisDashboardTabs({ project }: { project: ProjectRecord }) {
               {analysis.chartSpecs.map((spec) => (
                 <Card key={spec.id}>
                   <Text type="label">{spec.title}</Text>
+                  {spec.subtitle ? <Text type="supporting">{spec.subtitle}</Text> : null}
                   <ChartRenderer spec={spec} />
                 </Card>
               ))}

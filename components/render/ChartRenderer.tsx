@@ -31,21 +31,6 @@ const PIE_COLORS = [
   "#84cc16",
 ];
 
-function buildTrendSegment(
-  spec: ChartSpec
-): readonly [{ x: number; y: number }, { x: number; y: number }] {
-  const { slope, intercept } = spec.trendLine ?? { slope: 0, intercept: 0 };
-  const xValues = spec.data
-    .map((row) => row[spec.xKey])
-    .filter((v): v is number => typeof v === "number");
-  const minX = Math.min(...xValues);
-  const maxX = Math.max(...xValues);
-  return [
-    { x: minX, y: slope * minX + intercept },
-    { x: maxX, y: slope * maxX + intercept },
-  ] as const;
-}
-
 export function ChartRenderer({ spec }: { spec: ChartSpec }) {
   return (
     <ResponsiveContainer width="100%" height={280}>
@@ -90,7 +75,7 @@ export function ChartRenderer({ spec }: { spec: ChartSpec }) {
           <Scatter data={spec.data} fill="#3b82f6" fillOpacity={0.7} />
           {spec.trendLine ? (
             <ReferenceLine
-              segment={buildTrendSegment(spec)}
+              segment={spec.trendLine.segment}
               stroke="#ef4444"
               strokeDasharray="6 4"
               strokeWidth={1.5}

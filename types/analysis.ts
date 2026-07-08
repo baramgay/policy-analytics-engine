@@ -75,7 +75,11 @@ export interface ChartSpec {
   yKey: string;
   data: Record<string, string | number>[];
   subtitle?: string;
-  trendLine?: { slope: number; intercept: number } | null;
+  trendLine?: {
+    slope: number;
+    intercept: number;
+    segment: readonly [{ x: number; y: number }, { x: number; y: number }];
+  } | null;
   errorKey?: string;
 }
 

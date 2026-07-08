@@ -173,7 +173,57 @@ describe("recommendCharts", () => {
     expect(scatterChart).toBeDefined();
     expect(scatterChart?.trendLine?.slope).toBeGreaterThan(24);
     expect(scatterChart?.trendLine?.slope).toBeLessThan(26);
+    expect(scatterChart?.trendLine?.segment).toHaveLength(2);
     expect(scatterChart?.subtitle).toContain("상관계수");
+    expect(scatterChart?.data.length).toBeLessThanOrEqual(300);
+  });
+
+  it("computes the trend line from the full dataset, not the downsampled render points", () => {
+    // 짝수 인덱스는 기울기 1, 홀수 인덱스는 기울기 100에 가깝게 구성한다.
+    // 다운샘플 스트라이드가 2가 되도록 600행을 사용하면(300 초과), step=2로
+    // 짝수 인덱스만 남는다 — 회귀를 샘플에서 계산하면 기울기가 1에 가깝게
+    // 나오지만, 전체 데이터로 계산하면 훨씬 커야 한다.
+    const rows = Array.from({ length: 600 }, (_, i) => ({
+      x: i,
+      y: i % 2 === 0 ? i : i * 100 + 5000,
+    }));
+    const dataset: ParsedDataset = { columns: ["x", "y"], rows };
+    const schema = profileSchema(dataset);
+    const numericSummary = generateNumericSummary(dataset, schema);
+    const categoricalSummary = generateCategoricalSummary(dataset, schema);
+    const correlationSummary: CorrelationPair[] = [
+      {
+        columnA: "x",
+        columnB: "y",
+        coefficient: 0.9,
+        strength: "매우 강함",
+        pValue: 0.0001,
+        significant: true,
+        interpretation: "",
+      },
+    ];
+
+    const result = recommendCharts(
+      dataset,
+      schema,
+      numericSummary,
+      categoricalSummary,
+      undefined,
+      correlationSummary
+    );
+    const scatterChart = result.find((spec) => spec.type === "scatter");
+
+    const n = rows.length;
+    const meanX = rows.reduce((sum, r) => sum + r.x, 0) / n;
+    const meanY = rows.reduce((sum, r) => sum + r.y, 0) / n;
+    const sxx = rows.reduce((sum, r) => sum + (r.x - meanX) * (r.x - meanX), 0);
+    const sxy = rows.reduce((sum, r) => sum + (r.x - meanX) * (r.y - meanY), 0);
+    const expectedSlope = sxy / sxx;
+
+    // 샘플(짝수 인덱스)만으로 계산하면 기울기가 대략 1에 불과하므로,
+    // 전체 데이터 기준 기대값과는 확실히 구분된다.
+    expect(expectedSlope).toBeGreaterThan(40);
+    expect(scatterChart?.trendLine?.slope).toBeCloseTo(expectedSlope, 6);
     expect(scatterChart?.data.length).toBeLessThanOrEqual(300);
   });
 });
