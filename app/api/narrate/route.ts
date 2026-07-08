@@ -34,6 +34,12 @@ function pickNarratorInput(body: unknown): NarratorInput | null {
     numericSummary: source.numericSummary as NarratorInput["numericSummary"],
     categoricalSummary: source.categoricalSummary as NarratorInput["categoricalSummary"],
     ruleBasedInsight: String(source.ruleBasedInsight),
+    correlationSummary: source.correlationSummary as NarratorInput["correlationSummary"],
+    categoricalCorrelationSummary:
+      source.categoricalCorrelationSummary as NarratorInput["categoricalCorrelationSummary"],
+    vifSummary: source.vifSummary as NarratorInput["vifSummary"],
+    groupComparisonSummary: source.groupComparisonSummary as NarratorInput["groupComparisonSummary"],
+    timeSeriesSummary: source.timeSeriesSummary as NarratorInput["timeSeriesSummary"],
   };
 }
 

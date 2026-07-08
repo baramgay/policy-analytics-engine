@@ -259,6 +259,15 @@ export interface ProjectRecord {
   preprocessing?: PreprocessingReport;
 }
 
+/** AI narrator에 전달되는 시계열 요약. TimeSeriesAnalysis에서 원본 포인트(points)를 제외하고 축약한 형태. */
+export interface NarratorTimeSeries {
+  dateColumn: string;
+  numericColumn: string;
+  trendDirection: string;
+  momChange: number | null;
+  yoyChange: number | null;
+}
+
 /** AI narrator에 전달되는 입력. 원본 행 데이터(rows)는 절대 포함하지 않는다. */
 export interface NarratorInput {
   projectTitle: string;
@@ -270,4 +279,9 @@ export interface NarratorInput {
   numericSummary: NumericColumnStats[];
   categoricalSummary: CategoricalColumnStats[];
   ruleBasedInsight: string;
+  correlationSummary?: CorrelationPair[];
+  categoricalCorrelationSummary?: CategoricalCorrelationPair[];
+  vifSummary?: VifResult[];
+  groupComparisonSummary?: GroupComparisonResult[];
+  timeSeriesSummary?: NarratorTimeSeries[];
 }
