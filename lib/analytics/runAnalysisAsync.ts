@@ -23,9 +23,15 @@ export async function runAnalysisAsync(dataset: ParsedDataset): Promise<Analysis
     };
 
     // 워커 실행 자체가 실패하면 기능 상실보다 UI 일시 정지가 낫다고 판단해 동기 폴백으로 처리한다
+    // 단, 이 콜백은 Promise executor의 동기 스코프 밖(이벤트 핸들러)이라 runAnalysis가 던지는 예외가
+    // 자동으로 reject되지 않으므로 명시적으로 잡아서 reject해야 한다
     worker.onerror = () => {
       worker.terminate();
-      resolve(runAnalysis(dataset));
+      try {
+        resolve(runAnalysis(dataset));
+      } catch (e) {
+        reject(e instanceof Error ? e : new Error(String(e)));
+      }
     };
 
     worker.postMessage(dataset);
