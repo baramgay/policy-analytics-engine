@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { Card, FormLayout, TextInput, TextArea, Button, List, ListItem, Text } from "@astryxdesign/core";
 import type { ProjectComment } from "@/lib/data/types";
-import { addComment } from "@/lib/data/store";
+import { addComment } from "@/lib/data/shareClient";
 
 export function CommentSection({
   projectId,

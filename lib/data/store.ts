@@ -6,22 +6,14 @@ import {
   getProjectLocal,
   createProjectLocal,
   addReportLocal,
-  createShareLocal,
-  getProjectByTokenLocal,
-  listCommentsLocal,
-  addCommentLocal,
 } from "./localStore";
 import {
   listProjectsRemote,
   getProjectRemote,
   createProjectRemote,
   addReportRemote,
-  createShareRemote,
-  getProjectByTokenRemote,
-  listCommentsRemote,
-  addCommentRemote,
 } from "./supabaseStore";
-import type { CreateProjectInput, ProjectComment, ProjectShare } from "./types";
+import type { CreateProjectInput } from "./types";
 
 export const isDemoMode = !isSupabaseConfigured;
 
@@ -46,28 +38,7 @@ export async function addReport(
     : addReportLocal(projectId, report);
 }
 
-export async function createShare(
-  projectId: string,
-  expiresAt: string | null = null
-): Promise<ProjectShare> {
-  return isSupabaseConfigured
-    ? createShareRemote(projectId, expiresAt)
-    : createShareLocal(projectId, expiresAt);
-}
+// 공유 링크/댓글 관련 함수는 서버 전용(lib/data/shareServer.ts)과 클라이언트 전용(lib/data/shareClient.ts)으로 분리되었다
+// (service-role 키가 클라이언트 번들에 섞이지 않도록 하기 위함)
 
-export async function getProjectByToken(token: string): Promise<ProjectRecord | null> {
-  return isSupabaseConfigured ? getProjectByTokenRemote(token) : getProjectByTokenLocal(token);
-}
-
-export async function listComments(projectId: string): Promise<ProjectComment[]> {
-  return isSupabaseConfigured ? listCommentsRemote(projectId) : listCommentsLocal(projectId);
-}
-
-export async function addComment(
-  projectId: string,
-  input: { authorName: string; content: string }
-): Promise<ProjectComment> {
-  return isSupabaseConfigured ? addCommentRemote(projectId, input) : addCommentLocal(projectId, input);
-}
-
-export type { CreateProjectInput, ProjectComment, ProjectShare };
+export type { CreateProjectInput };

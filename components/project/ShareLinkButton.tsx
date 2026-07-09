@@ -3,7 +3,7 @@
 // 프로젝트 상세 화면의 공유 링크 생성 버튼: 토큰을 발급하고 링크를 클립보드에 복사한다
 import { useState } from "react";
 import { Button, useToast } from "@astryxdesign/core";
-import { createShare } from "@/lib/data/store";
+import { createShare } from "@/lib/data/shareClient";
 
 export function ShareLinkButton({ projectId }: { projectId: string }) {
   const toast = useToast();

@@ -1,7 +1,7 @@
 // 공유 화면: 토큰으로 프로젝트 분석 결과를 로그인 없이 읽기 전용으로 보여주고 댓글을 남길 수 있다
 import { notFound } from "next/navigation";
 import { Card, Heading, Text, ProgressBar, Badge, Section, MetadataList, MetadataListItem, Divider } from "@astryxdesign/core";
-import { getProjectByToken, listComments } from "@/lib/data/store";
+import { getProjectByToken, listComments } from "@/lib/data/shareServer";
 import { CommentSection } from "@/components/shared/CommentSection";
 
 function qualityVariant(score: number): "success" | "warning" | "error" {
