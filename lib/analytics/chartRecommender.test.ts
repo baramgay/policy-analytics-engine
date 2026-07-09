@@ -5,7 +5,7 @@ import {
   generateCategoricalSummary,
   generateNumericSummary,
 } from "@/lib/analytics/statsGenerator";
-import type { ParsedDataset } from "@/types/analysis";
+import type { CorrelationPair, ParsedDataset } from "@/types/analysis";
 
 describe("recommendCharts", () => {
   it("recommends a line chart when the dataset has both a date column and a numeric column", () => {
@@ -75,7 +75,52 @@ describe("recommendCharts", () => {
     expect(secondBarChart?.xKey).toBe("성별");
   });
 
-  it("recommends a grouped-bar chart from the most significant group comparison result", () => {
+  it("falls back to a grouped-bar chart when no group comparison is significant", () => {
+    const dataset: ParsedDataset = {
+      columns: ["성별", "지출액"],
+      rows: [
+        { 성별: "남", 지출액: 100 },
+        { 성별: "여", 지출액: 105 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+    const numericSummary = generateNumericSummary(dataset, schema);
+    const categoricalSummary = generateCategoricalSummary(dataset, schema);
+    const groupComparisonSummary = [
+      {
+        groupColumn: "성별",
+        numericColumn: "지출액",
+        method: "welch-t" as const,
+        groupCount: 2,
+        statistic: -0.5,
+        pValue: 0.8,
+        significant: false,
+        groupMeans: [
+          { group: "남", mean: 100, count: 1, sd: 0 },
+          { group: "여", mean: 105, count: 1, sd: 0 },
+        ],
+        effectSize: null,
+        interpretation: "",
+      },
+    ];
+
+    const result = recommendCharts(
+      dataset,
+      schema,
+      numericSummary,
+      categoricalSummary,
+      groupComparisonSummary
+    );
+
+    const groupedChart = result.find((spec) => spec.type === "grouped-bar");
+    expect(groupedChart).toBeDefined();
+    expect(groupedChart?.xKey).toBe("성별");
+    expect(groupedChart?.data).toHaveLength(2);
+    // 유의하지 않으므로 오차막대 차트는 폴백 대상이 아니라 존재하지 않아야 한다.
+    expect(result.find((spec) => spec.errorKey === "sd")).toBeUndefined();
+  });
+
+  it("recommends a bar chart with sd error bars for the first significant group comparison", () => {
     const dataset: ParsedDataset = {
       columns: ["성별", "지출액"],
       rows: [
@@ -96,9 +141,11 @@ describe("recommendCharts", () => {
         pValue: 0.01,
         significant: true,
         groupMeans: [
-          { group: "남", mean: 100, count: 1 },
-          { group: "여", mean: 200, count: 1 },
+          { group: "남", mean: 100, count: 1, sd: 0 },
+          { group: "여", mean: 200, count: 1, sd: 0 },
         ],
+        effectSize: null,
+        interpretation: "p=0.0100로 유의함",
       },
     ];
 
@@ -110,10 +157,105 @@ describe("recommendCharts", () => {
       groupComparisonSummary
     );
 
-    const groupedChart = result.find((spec) => spec.type === "grouped-bar");
-    expect(groupedChart).toBeDefined();
-    expect(groupedChart?.xKey).toBe("성별");
-    expect(groupedChart?.data).toHaveLength(2);
+    const errorBarChart = result.find((spec) => spec.errorKey === "sd");
+    expect(errorBarChart).toBeDefined();
+    expect(errorBarChart?.type).toBe("bar");
+    expect(errorBarChart?.xKey).toBe("group");
+    expect(errorBarChart?.yKey).toBe("mean");
+    expect(errorBarChart?.subtitle).toBe("p=0.0100로 유의함");
+    expect(errorBarChart?.data).toEqual([
+      { group: "남", mean: 100, sd: 0 },
+      { group: "여", mean: 200, sd: 0 },
+    ]);
+    // 동일한 그룹비교 대상에 대해 중복되는 grouped-bar 차트는 뜨지 않아야 한다.
+    expect(result.find((spec) => spec.type === "grouped-bar")).toBeUndefined();
+  });
+
+  it("does not render both a grouped-bar chart and an sd error-bar chart for the same single significant group comparison result", () => {
+    const dataset: ParsedDataset = {
+      columns: ["성별", "지출액"],
+      rows: [
+        { 성별: "남", 지출액: 100 },
+        { 성별: "여", 지출액: 200 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+    const numericSummary = generateNumericSummary(dataset, schema);
+    const categoricalSummary = generateCategoricalSummary(dataset, schema);
+    const groupComparisonSummary = [
+      {
+        groupColumn: "성별",
+        numericColumn: "지출액",
+        method: "welch-t" as const,
+        groupCount: 2,
+        statistic: -5,
+        pValue: 0.01,
+        significant: true,
+        groupMeans: [
+          { group: "남", mean: 100, count: 1, sd: 0 },
+          { group: "여", mean: 200, count: 1, sd: 0 },
+        ],
+        effectSize: null,
+        interpretation: "p=0.0100로 유의함",
+      },
+    ];
+
+    const result = recommendCharts(
+      dataset,
+      schema,
+      numericSummary,
+      categoricalSummary,
+      groupComparisonSummary
+    );
+
+    const similarCharts = result.filter(
+      (spec) => spec.type === "grouped-bar" || spec.errorKey === "sd"
+    );
+    // 성별x지출액 그룹비교가 1건뿐이고 유의하므로, 두 유사 차트 중
+    // 개선된 오차막대 버전 하나만 존재해야 한다.
+    expect(similarCharts).toHaveLength(1);
+    expect(similarCharts[0]?.type).toBe("bar");
+    expect(similarCharts[0]?.errorKey).toBe("sd");
+  });
+
+  it("skips the sd error-bar bar chart when no group comparison is significant", () => {
+    const dataset: ParsedDataset = {
+      columns: ["성별", "지출액"],
+      rows: [
+        { 성별: "남", 지출액: 100 },
+        { 성별: "여", 지출액: 105 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+    const numericSummary = generateNumericSummary(dataset, schema);
+    const categoricalSummary = generateCategoricalSummary(dataset, schema);
+    const groupComparisonSummary = [
+      {
+        groupColumn: "성별",
+        numericColumn: "지출액",
+        method: "welch-t" as const,
+        groupCount: 2,
+        statistic: -0.5,
+        pValue: 0.8,
+        significant: false,
+        groupMeans: [
+          { group: "남", mean: 100, count: 1, sd: 0 },
+          { group: "여", mean: 105, count: 1, sd: 0 },
+        ],
+        effectSize: null,
+        interpretation: "",
+      },
+    ];
+
+    const result = recommendCharts(
+      dataset,
+      schema,
+      numericSummary,
+      categoricalSummary,
+      groupComparisonSummary
+    );
+
+    expect(result.find((spec) => spec.errorKey === "sd")).toBeUndefined();
   });
 
   it("returns an empty array when the dataset has neither numeric nor categorical columns", () => {
@@ -132,5 +274,96 @@ describe("recommendCharts", () => {
     const result = recommendCharts(dataset, schema, numericSummary, categoricalSummary);
 
     expect(result).toEqual([]);
+  });
+
+  it("recommends a scatter chart with a trend line for the most significant correlation pair", () => {
+    const rows = Array.from({ length: 30 }, (_, i) => ({
+      광고비: i,
+      매출액: i * 25 + (i % 3),
+    }));
+    const dataset: ParsedDataset = {
+      columns: ["광고비", "매출액"],
+      rows,
+    };
+    const schema = profileSchema(dataset);
+    const numericSummary = generateNumericSummary(dataset, schema);
+    const categoricalSummary = generateCategoricalSummary(dataset, schema);
+    const correlationSummary: CorrelationPair[] = [
+      {
+        columnA: "광고비",
+        columnB: "매출액",
+        coefficient: 0.99,
+        strength: "매우 강함",
+        pValue: 0.0001,
+        significant: true,
+        interpretation: "상관계수 0.99, p<0.001로 통계적으로 유의한 매우 강함 양의 상관관계",
+      },
+    ];
+
+    const result = recommendCharts(
+      dataset,
+      schema,
+      numericSummary,
+      categoricalSummary,
+      undefined,
+      correlationSummary
+    );
+
+    const scatterChart = result.find((spec) => spec.type === "scatter");
+    expect(scatterChart).toBeDefined();
+    expect(scatterChart?.trendLine?.slope).toBeGreaterThan(24);
+    expect(scatterChart?.trendLine?.slope).toBeLessThan(26);
+    expect(scatterChart?.trendLine?.segment).toHaveLength(2);
+    expect(scatterChart?.subtitle).toContain("상관계수");
+    expect(scatterChart?.data.length).toBeLessThanOrEqual(300);
+  });
+
+  it("computes the trend line from the full dataset, not the downsampled render points", () => {
+    // 짝수 인덱스는 기울기 1, 홀수 인덱스는 기울기 100에 가깝게 구성한다.
+    // 다운샘플 스트라이드가 2가 되도록 600행을 사용하면(300 초과), step=2로
+    // 짝수 인덱스만 남는다 — 회귀를 샘플에서 계산하면 기울기가 1에 가깝게
+    // 나오지만, 전체 데이터로 계산하면 훨씬 커야 한다.
+    const rows = Array.from({ length: 600 }, (_, i) => ({
+      x: i,
+      y: i % 2 === 0 ? i : i * 100 + 5000,
+    }));
+    const dataset: ParsedDataset = { columns: ["x", "y"], rows };
+    const schema = profileSchema(dataset);
+    const numericSummary = generateNumericSummary(dataset, schema);
+    const categoricalSummary = generateCategoricalSummary(dataset, schema);
+    const correlationSummary: CorrelationPair[] = [
+      {
+        columnA: "x",
+        columnB: "y",
+        coefficient: 0.9,
+        strength: "매우 강함",
+        pValue: 0.0001,
+        significant: true,
+        interpretation: "",
+      },
+    ];
+
+    const result = recommendCharts(
+      dataset,
+      schema,
+      numericSummary,
+      categoricalSummary,
+      undefined,
+      correlationSummary
+    );
+    const scatterChart = result.find((spec) => spec.type === "scatter");
+
+    const n = rows.length;
+    const meanX = rows.reduce((sum, r) => sum + r.x, 0) / n;
+    const meanY = rows.reduce((sum, r) => sum + r.y, 0) / n;
+    const sxx = rows.reduce((sum, r) => sum + (r.x - meanX) * (r.x - meanX), 0);
+    const sxy = rows.reduce((sum, r) => sum + (r.x - meanX) * (r.y - meanY), 0);
+    const expectedSlope = sxy / sxx;
+
+    // 샘플(짝수 인덱스)만으로 계산하면 기울기가 대략 1에 불과하므로,
+    // 전체 데이터 기준 기대값과는 확실히 구분된다.
+    expect(expectedSlope).toBeGreaterThan(40);
+    expect(scatterChart?.trendLine?.slope).toBeCloseTo(expectedSlope, 6);
+    expect(scatterChart?.data.length).toBeLessThanOrEqual(300);
   });
 });

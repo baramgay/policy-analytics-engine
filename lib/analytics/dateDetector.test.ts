@@ -74,4 +74,58 @@ describe("generateTimeSeriesSummary", () => {
     expect(result[0].points).toHaveLength(2);
     expect(result[0].points[0].value).toBe(150);
   });
+
+  it("computes MoM and YoY change for monthly data spanning more than a year", () => {
+    const dataset: ParsedDataset = {
+      columns: ["날짜", "매출"],
+      rows: [
+        { 날짜: "2025-01-01", 매출: 100 },
+        { 날짜: "2025-02-01", 매출: 110 },
+        { 날짜: "2025-11-01", 매출: 150 },
+        { 날짜: "2025-12-01", 매출: 160 },
+        { 날짜: "2026-01-01", 매출: 200 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = generateTimeSeriesSummary(dataset, schema);
+
+    expect(result[0].momChange).toBeCloseTo(25, 1);
+    expect(result[0].yoyChange).toBeCloseTo(100, 1);
+  });
+
+  it("returns null for MoM/YoY when the data is daily rather than monthly", () => {
+    const dataset: ParsedDataset = {
+      columns: ["날짜", "매출"],
+      rows: [
+        { 날짜: "2026-01-01", 매출: 100 },
+        { 날짜: "2026-01-02", 매출: 200 },
+        { 날짜: "2026-01-03", 매출: 300 },
+        { 날짜: "2026-01-04", 매출: 400 },
+        { 날짜: "2026-01-05", 매출: 500 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = generateTimeSeriesSummary(dataset, schema);
+
+    expect(result[0].momChange).toBeNull();
+    expect(result[0].yoyChange).toBeNull();
+  });
+
+  it("returns a MoM value but a null YoY value when less than a year of history exists", () => {
+    const dataset: ParsedDataset = {
+      columns: ["날짜", "매출"],
+      rows: [
+        { 날짜: "2026-01-01", 매출: 100 },
+        { 날짜: "2026-02-01", 매출: 120 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = generateTimeSeriesSummary(dataset, schema);
+
+    expect(result[0].momChange).toBeCloseTo(20, 1);
+    expect(result[0].yoyChange).toBeNull();
+  });
 });

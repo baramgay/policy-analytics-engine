@@ -18,6 +18,100 @@ function renderBar(ratio: number): string {
   return `<div class="bar-track"><div class="bar-fill" style="width:${percent.toFixed(1)}%"></div></div>`;
 }
 
+function formatChangeRateHtml(value: number | null): string {
+  if (value === null) return "산출 불가";
+  return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
+}
+
+function buildCorrelationRowsHtml(analysis: AnalysisResult): string {
+  const significantPairs = (analysis.correlationSummary ?? []).filter((pair) => pair.significant);
+  return significantPairs
+    .map(
+      (pair) => `
+      <tr>
+        <td>${escapeHtml(pair.columnA)}</td>
+        <td>${escapeHtml(pair.columnB)}</td>
+        <td>${escapeHtml(pair.interpretation)}</td>
+      </tr>`
+    )
+    .join("");
+}
+
+function buildCategoricalCorrelationRowsHtml(analysis: AnalysisResult): string {
+  const targetPairs = (analysis.categoricalCorrelationSummary ?? []).filter(
+    (pair) => pair.significant || !pair.reliable
+  );
+  return targetPairs
+    .map(
+      (pair) => `
+      <tr>
+        <td>${escapeHtml(pair.columnA)}</td>
+        <td>${escapeHtml(pair.columnB)}</td>
+        <td>${escapeHtml(pair.interpretation)}</td>
+      </tr>`
+    )
+    .join("");
+}
+
+function buildVifRowsHtml(analysis: AnalysisResult): string {
+  const concerns = (analysis.vifSummary ?? []).filter((item) => item.concern);
+  return concerns
+    .map(
+      (item) => `
+      <tr>
+        <td>${escapeHtml(item.column)}</td>
+        <td>${item.vif !== null ? item.vif.toFixed(1) : "산출 불가"}</td>
+        <td>10 초과</td>
+      </tr>`
+    )
+    .join("");
+}
+
+function buildGroupComparisonRowsHtml(analysis: AnalysisResult): string {
+  const results = analysis.groupComparisonSummary ?? [];
+  return results
+    .map(
+      (result) => `
+      <tr>
+        <td>${escapeHtml(result.groupColumn)}</td>
+        <td>${escapeHtml(result.numericColumn)}</td>
+        <td>${escapeHtml(result.interpretation)}</td>
+      </tr>`
+    )
+    .join("");
+}
+
+function buildOutlierRowsHtml(analysis: AnalysisResult): string {
+  const columns = (analysis.outlierSummary ?? []).filter((item) => item.outlierCount > 0);
+  return columns
+    .map(
+      (item) => `
+      <tr>
+        <td>${escapeHtml(item.column)}</td>
+        <td>${item.highConfidenceIndices.length.toLocaleString()}건</td>
+        <td>${item.referenceIndices.length.toLocaleString()}건</td>
+        <td>${escapeHtml(item.lowerBound)} ~ ${escapeHtml(item.upperBound)}</td>
+      </tr>`
+    )
+    .join("");
+}
+
+function buildTimeSeriesRowsHtml(analysis: AnalysisResult): string {
+  const series = analysis.timeSeriesSummary ?? [];
+  return series
+    .map(
+      (item) => `
+      <tr>
+        <td>${escapeHtml(item.dateColumn)}</td>
+        <td>${escapeHtml(item.numericColumn)}</td>
+        <td>${escapeHtml(item.trendDirection)}</td>
+        <td>${escapeHtml(formatChangeRateHtml(item.momChange))}</td>
+        <td>${escapeHtml(formatChangeRateHtml(item.yoyChange))}</td>
+      </tr>`
+    )
+    .join("");
+}
+
 export function buildReportHtml(meta: ProjectMeta, analysis: AnalysisResult): string {
   const title = escapeHtml(meta.title);
   const generatedAt = new Date(analysis.generatedAt).toLocaleString("ko-KR");
@@ -57,6 +151,13 @@ export function buildReportHtml(meta: ProjectMeta, analysis: AnalysisResult): st
       </tr>`;
     })
     .join("");
+
+  const correlationRows = buildCorrelationRowsHtml(analysis);
+  const categoricalCorrelationRows = buildCategoricalCorrelationRowsHtml(analysis);
+  const vifRows = buildVifRowsHtml(analysis);
+  const groupComparisonRows = buildGroupComparisonRowsHtml(analysis);
+  const outlierRows = buildOutlierRowsHtml(analysis);
+  const timeSeriesRows = buildTimeSeriesRowsHtml(analysis);
 
   const missingRows = analysis.missingSummary.columns
     .map(
@@ -120,6 +221,12 @@ export function buildReportHtml(meta: ProjectMeta, analysis: AnalysisResult): st
   .top-value-ratio { font-size: 12px; color: #5a5f66; min-width: 32px; }
   .insight { white-space: pre-wrap; background: #fafbfc; border: 1px solid #eceef1; border-radius: 6px; padding: 16px; }
   .footer { margin-top: 32px; color: #9aa0a8; font-size: 12px; text-align: right; }
+  @media print {
+    body { background: #fff; color: #000; font-size: 11pt; }
+    h1, h2 { break-after: avoid; }
+    table { break-inside: avoid; }
+  }
+  @page { margin: 18mm; }
 </style>
 </head>
 <body>
@@ -163,6 +270,67 @@ export function buildReportHtml(meta: ProjectMeta, analysis: AnalysisResult): st
     <table>
       <thead><tr><th>변수명</th><th>고유값 수</th><th>상위 값 분포</th></tr></thead>
       <tbody>${categoricalRows}</tbody>
+    </table>`
+        : ""
+    }
+
+    ${
+      correlationRows
+        ? `<h2>상관 검정</h2>
+    <table>
+      <thead><tr><th>변수 A</th><th>변수 B</th><th>해석</th></tr></thead>
+      <tbody>${correlationRows}</tbody>
+    </table>`
+        : ""
+    }
+
+    ${
+      categoricalCorrelationRows
+        ? `<h2>범주형 변수 연관성</h2>
+    <table>
+      <thead><tr><th>변수 A</th><th>변수 B</th><th>해석</th></tr></thead>
+      <tbody>${categoricalCorrelationRows}</tbody>
+    </table>`
+        : ""
+    }
+
+    ${
+      vifRows
+        ? `<h2>다중공선성 진단</h2>
+    <table>
+      <thead><tr><th>변수명</th><th>VIF</th><th>비고</th></tr></thead>
+      <tbody>${vifRows}</tbody>
+    </table>
+    <p>회귀 분석 시 해당 변수들의 동시 투입에 주의가 필요합니다.</p>`
+        : ""
+    }
+
+    ${
+      groupComparisonRows
+        ? `<h2>그룹 차이 검정</h2>
+    <table>
+      <thead><tr><th>그룹 변수</th><th>수치 변수</th><th>해석</th></tr></thead>
+      <tbody>${groupComparisonRows}</tbody>
+    </table>`
+        : ""
+    }
+
+    ${
+      outlierRows
+        ? `<h2>이상치 탐지</h2>
+    <table>
+      <thead><tr><th>변수명</th><th>고신뢰 이상치</th><th>참고 수준</th><th>정상 범위</th></tr></thead>
+      <tbody>${outlierRows}</tbody>
+    </table>`
+        : ""
+    }
+
+    ${
+      timeSeriesRows
+        ? `<h2>시계열 동향</h2>
+    <table>
+      <thead><tr><th>날짜 변수</th><th>수치 변수</th><th>추세</th><th>전월대비</th><th>전년동월대비</th></tr></thead>
+      <tbody>${timeSeriesRows}</tbody>
     </table>`
         : ""
     }

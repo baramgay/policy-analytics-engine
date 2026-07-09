@@ -65,7 +65,7 @@ export interface CategoricalColumnStats {
   topValues: { value: string; count: number; ratio: number }[];
 }
 
-export type ChartType = "bar" | "line" | "pie" | "grouped-bar";
+export type ChartType = "bar" | "line" | "pie" | "grouped-bar" | "scatter";
 
 export interface ChartSpec {
   id: string;
@@ -74,6 +74,13 @@ export interface ChartSpec {
   xKey: string;
   yKey: string;
   data: Record<string, string | number>[];
+  subtitle?: string;
+  trendLine?: {
+    slope: number;
+    intercept: number;
+    segment: readonly [{ x: number; y: number }, { x: number; y: number }];
+  } | null;
+  errorKey?: string;
 }
 
 export interface MapPoint {
@@ -104,6 +111,26 @@ export interface CorrelationPair {
   columnB: string;
   coefficient: number;
   strength: "매우 강함" | "강함" | "보통" | "약함" | "거의 없음";
+  pValue: number;
+  significant: boolean;
+  interpretation: string;
+}
+
+export interface CategoricalCorrelationPair {
+  columnA: string;
+  columnB: string;
+  chiSquare: number;
+  pValue: number;
+  significant: boolean;
+  cramersV: number;
+  reliable: boolean;
+  interpretation: string;
+}
+
+export interface VifResult {
+  column: string;
+  vif: number | null;
+  concern: boolean;
 }
 
 export interface OutlierColumnInfo {
@@ -112,6 +139,14 @@ export interface OutlierColumnInfo {
   upperBound: number;
   outlierCount: number;
   outlierIndices: number[];
+  highConfidenceIndices: number[];
+  referenceIndices: number[];
+}
+
+export interface EffectSize {
+  type: "cohen_d" | "eta_squared";
+  value: number;
+  magnitude: "작음" | "중간" | "큼";
 }
 
 export interface GroupComparisonResult {
@@ -122,7 +157,9 @@ export interface GroupComparisonResult {
   statistic: number;
   pValue: number;
   significant: boolean;
-  groupMeans: { group: string; mean: number; count: number }[];
+  groupMeans: { group: string; mean: number; count: number; sd: number }[];
+  effectSize: EffectSize | null;
+  interpretation: string;
 }
 
 export interface TimeSeriesPoint {
@@ -138,6 +175,8 @@ export interface TimeSeriesAnalysis {
   trendIntercept: number;
   trendDirection: "증가" | "감소" | "보합";
   points: TimeSeriesPoint[];
+  momChange: number | null;
+  yoyChange: number | null;
 }
 
 export interface AnalysisResult {
@@ -151,6 +190,8 @@ export interface AnalysisResult {
   insightSummary: string;
   generatedAt: string;
   correlationSummary?: CorrelationPair[];
+  categoricalCorrelationSummary?: CategoricalCorrelationPair[];
+  vifSummary?: VifResult[];
   outlierSummary?: OutlierColumnInfo[];
   groupComparisonSummary?: GroupComparisonResult[];
   timeSeriesSummary?: TimeSeriesAnalysis[];
@@ -218,6 +259,15 @@ export interface ProjectRecord {
   preprocessing?: PreprocessingReport;
 }
 
+/** AI narrator에 전달되는 시계열 요약. TimeSeriesAnalysis에서 원본 포인트(points)를 제외하고 축약한 형태. */
+export interface NarratorTimeSeries {
+  dateColumn: string;
+  numericColumn: string;
+  trendDirection: string;
+  momChange: number | null;
+  yoyChange: number | null;
+}
+
 /** AI narrator에 전달되는 입력. 원본 행 데이터(rows)는 절대 포함하지 않는다. */
 export interface NarratorInput {
   projectTitle: string;
@@ -229,4 +279,9 @@ export interface NarratorInput {
   numericSummary: NumericColumnStats[];
   categoricalSummary: CategoricalColumnStats[];
   ruleBasedInsight: string;
+  correlationSummary?: CorrelationPair[];
+  categoricalCorrelationSummary?: CategoricalCorrelationPair[];
+  vifSummary?: VifResult[];
+  groupComparisonSummary?: GroupComparisonResult[];
+  timeSeriesSummary?: NarratorTimeSeries[];
 }

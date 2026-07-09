@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { generateCorrelationSummary } from "@/lib/analytics/correlationAnalyzer";
+import {
+  generateCorrelationSummary,
+  generateCategoricalCorrelationSummary,
+  computeVif,
+} from "@/lib/analytics/correlationAnalyzer";
 import { profileSchema } from "@/lib/analytics/schemaProfiler";
 import type { ParsedDataset } from "@/types/analysis";
 
@@ -74,5 +78,199 @@ describe("generateCorrelationSummary", () => {
     const abPair = result.find((p) => p.columnA === "a" && p.columnB === "b");
     expect(abPair?.coefficient).toBe(1);
     expect(Math.abs(result[0].coefficient)).toBeGreaterThanOrEqual(Math.abs(result[1].coefficient));
+  });
+
+  it("marks a strong correlation from enough samples as statistically significant", () => {
+    const dataset: ParsedDataset = {
+      columns: ["금액", "수량"],
+      rows: [
+        { 금액: 1, 수량: 2.1 },
+        { 금액: 2, 수량: 3.9 },
+        { 금액: 3, 수량: 6.2 },
+        { 금액: 4, 수량: 7.8 },
+        { 금액: 5, 수량: 10.1 },
+        { 금액: 6, 수량: 11.9 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = generateCorrelationSummary(dataset, schema);
+
+    expect(result[0].significant).toBe(true);
+    expect(result[0].pValue).toBeLessThan(0.05);
+    expect(result[0].interpretation).toContain("유의한");
+  });
+
+  it("marks a weak correlation from a small sample as not statistically significant", () => {
+    const dataset: ParsedDataset = {
+      columns: ["금액", "임의값"],
+      rows: [
+        { 금액: 1, 임의값: 5 },
+        { 금액: 2, 임의값: 3 },
+        { 금액: 3, 임의값: 6 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = generateCorrelationSummary(dataset, schema);
+
+    expect(result[0].significant).toBe(false);
+  });
+
+  it("formats a perfect correlation's p-value as p<0.001 instead of p=0", () => {
+    const dataset: ParsedDataset = {
+      columns: ["금액", "수량"],
+      rows: [
+        { 금액: 1, 수량: 2 },
+        { 금액: 2, 수량: 4 },
+        { 금액: 3, 수량: 6 },
+        { 금액: 4, 수량: 8 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = generateCorrelationSummary(dataset, schema);
+
+    expect(result[0].pValue).toBe(0);
+    expect(result[0].interpretation).toContain("p<0.001");
+    expect(result[0].interpretation).not.toContain("p=0으로");
+  });
+});
+
+describe("generateCategoricalCorrelationSummary", () => {
+  it("detects a strong, reliable association between two categorical columns", () => {
+    const rows = [
+      ...Array.from({ length: 20 }, () => ({ 그룹: "A", 결과: "성공" })),
+      ...Array.from({ length: 20 }, () => ({ 그룹: "B", 결과: "실패" })),
+    ];
+    const dataset: ParsedDataset = { columns: ["그룹", "결과"], rows };
+    const schema = profileSchema(dataset);
+
+    const result = generateCategoricalCorrelationSummary(dataset, schema);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].significant).toBe(true);
+    expect(result[0].reliable).toBe(true);
+    expect(result[0].cramersV).toBeGreaterThan(0.9);
+  });
+
+  it("flags a small-sample contingency table as unreliable", () => {
+    const dataset: ParsedDataset = {
+      columns: ["그룹", "결과"],
+      rows: [
+        { 그룹: "A", 결과: "성공" },
+        { 그룹: "A", 결과: "실패" },
+        { 그룹: "B", 결과: "성공" },
+        { 그룹: "B", 결과: "실패" },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = generateCategoricalCorrelationSummary(dataset, schema);
+
+    expect(result[0].reliable).toBe(false);
+    expect(result[0].interpretation).toBe("표본이 작아 참고용");
+  });
+
+  it("returns an empty array when fewer than two categorical columns exist", () => {
+    const dataset: ParsedDataset = {
+      columns: ["금액"],
+      rows: [{ 금액: 1 }, { 금액: 2 }],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = generateCategoricalCorrelationSummary(dataset, schema);
+
+    expect(result).toEqual([]);
+  });
+
+  it("formats a strong association's p-value as p<0.001 instead of p=0", () => {
+    const rows = [
+      ...Array.from({ length: 30 }, () => ({ 그룹: "A", 결과: "성공" })),
+      ...Array.from({ length: 30 }, () => ({ 그룹: "B", 결과: "실패" })),
+    ];
+    const dataset: ParsedDataset = { columns: ["그룹", "결과"], rows };
+    const schema = profileSchema(dataset);
+
+    const result = generateCategoricalCorrelationSummary(dataset, schema);
+
+    expect(result[0].significant).toBe(true);
+    expect(result[0].interpretation).toContain("p<0.001");
+    expect(result[0].interpretation).not.toContain("p=0으로");
+  });
+
+  it("keeps contingency table cells distinct when category values contain spaces", () => {
+    // 그룹="A B"+결과="C" 와 그룹="A"+결과="B C" 는 공백으로 단순 결합하면 같은 키("A B C")로 충돌한다.
+    const rows = [
+      ...Array.from({ length: 8 }, () => ({ 그룹: "A B", 결과: "C" })),
+      ...Array.from({ length: 4 }, () => ({ 그룹: "A B", 결과: "B C" })),
+      ...Array.from({ length: 4 }, () => ({ 그룹: "A", 결과: "C" })),
+      ...Array.from({ length: 12 }, () => ({ 그룹: "A", 결과: "B C" })),
+    ];
+    const dataset: ParsedDataset = { columns: ["그룹", "결과"], rows };
+    const schema = profileSchema(dataset);
+
+    const result = generateCategoricalCorrelationSummary(dataset, schema);
+
+    expect(result).toHaveLength(1);
+    // 올바른 분할표 기준 카이제곱 ≈ 4.861, Cramér's V ≈ 0.417.
+    // 공백 결합 키 충돌 버그가 있으면 두 셀이 합산되어 값이 크게 달라진다 (카이제곱 ≈ 26.7).
+    expect(result[0].chiSquare).toBeCloseTo(4.861, 2);
+    expect(result[0].cramersV).toBeCloseTo(0.417, 2);
+  });
+});
+
+describe("computeVif", () => {
+  it("reports a low VIF for numerically independent columns", () => {
+    const dataset: ParsedDataset = {
+      columns: ["a", "b"],
+      rows: [
+        { a: 1, b: 5 },
+        { a: 2, b: 1 },
+        { a: 3, b: 8 },
+        { a: 4, b: 2 },
+        { a: 5, b: 9 },
+        { a: 6, b: 3 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = computeVif(dataset, schema);
+
+    expect(result).toHaveLength(2);
+    expect(result[0].concern).toBe(false);
+  });
+
+  it("flags high multicollinearity between two near-duplicate columns", () => {
+    const dataset: ParsedDataset = {
+      columns: ["a", "b"],
+      rows: [
+        { a: 1, b: 2.01 },
+        { a: 2, b: 4.02 },
+        { a: 3, b: 5.99 },
+        { a: 4, b: 8.01 },
+        { a: 5, b: 9.98 },
+        { a: 6, b: 12.02 },
+      ],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = computeVif(dataset, schema);
+
+    expect(result[0].vif).not.toBeNull();
+    expect(result[0].vif as number).toBeGreaterThan(10);
+    expect(result[0].concern).toBe(true);
+  });
+
+  it("returns an empty array when fewer than two numeric columns exist", () => {
+    const dataset: ParsedDataset = {
+      columns: ["지역"],
+      rows: [{ 지역: "창원시" }, { 지역: "진주시" }],
+    };
+    const schema = profileSchema(dataset);
+
+    const result = computeVif(dataset, schema);
+
+    expect(result).toEqual([]);
   });
 });

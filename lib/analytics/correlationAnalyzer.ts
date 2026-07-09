@@ -1,5 +1,15 @@
 // 수치형 컬럼 쌍별 Pearson 상관계수를 직접 계산한다 (외부 통계 라이브러리 미사용)
-import type { CorrelationPair, ParsedDataset, SchemaSummary } from "@/types/analysis";
+import type {
+  CategoricalCorrelationPair,
+  CorrelationPair,
+  ParsedDataset,
+  SchemaSummary,
+  VifResult,
+} from "@/types/analysis";
+import { tTestPValue, chiSquarePValue } from "./statUtils";
+import { multipleRegressionRSquared } from "./regressionUtils";
+
+const SIGNIFICANCE_LEVEL = 0.05;
 
 function pearsonCoefficient(x: number[], y: number[]): number {
   const n = x.length;
@@ -57,14 +67,158 @@ export function generateCorrelationSummary(
       if (xs.length < 2) continue;
 
       const coefficient = Number(pearsonCoefficient(xs, ys).toFixed(3));
+      const df = xs.length - 2;
+      let rawPValue = 1;
+      if (Math.abs(coefficient) >= 1) {
+        rawPValue = 0;
+      } else if (df > 0) {
+        const t = Math.abs(coefficient) * Math.sqrt(df / (1 - coefficient * coefficient));
+        rawPValue = tTestPValue(t, df);
+      }
+      const pValue = Number(rawPValue.toFixed(4));
+      const significant = pValue < SIGNIFICANCE_LEVEL;
+      const strength = classifyStrength(coefficient);
+      const pText = pValue < 0.001 ? "p<0.001" : `p=${pValue.toFixed(4)}`;
       pairs.push({
         columnA,
         columnB,
         coefficient,
-        strength: classifyStrength(coefficient),
+        strength,
+        pValue,
+        significant,
+        interpretation: significant
+          ? `상관계수 ${coefficient}, ${pText}로 통계적으로 유의한 ${strength} ${coefficient >= 0 ? "양" : "음"}의 상관관계`
+          : `상관계수 ${coefficient}, ${pText}로 통계적으로 유의하지 않음`,
       });
     }
   }
 
   return pairs.sort((a, b) => Math.abs(b.coefficient) - Math.abs(a.coefficient));
+}
+
+export function generateCategoricalCorrelationSummary(
+  dataset: ParsedDataset,
+  schema: SchemaSummary
+): CategoricalCorrelationPair[] {
+  const categoricalColumns = schema.columns.filter(
+    (c) => c.type === "categorical" || c.type === "boolean"
+  );
+  const pairs: CategoricalCorrelationPair[] = [];
+
+  for (let i = 0; i < categoricalColumns.length; i++) {
+    for (let j = i + 1; j < categoricalColumns.length; j++) {
+      const columnA = categoricalColumns[i].name;
+      const columnB = categoricalColumns[j].name;
+
+      const rowLabels = new Set<string>();
+      const colLabels = new Set<string>();
+      const pairCounts = new Map<string, number>();
+      let total = 0;
+
+      for (const row of dataset.rows) {
+        const a = row[columnA];
+        const b = row[columnB];
+        if (a === null || b === null) continue;
+        const rowLabel = String(a);
+        const colLabel = String(b);
+        rowLabels.add(rowLabel);
+        colLabels.add(colLabel);
+        const key = JSON.stringify([rowLabel, colLabel]);
+        pairCounts.set(key, (pairCounts.get(key) ?? 0) + 1);
+        total += 1;
+      }
+
+      if (total === 0 || rowLabels.size < 2 || colLabels.size < 2) continue;
+
+      const rows = Array.from(rowLabels);
+      const cols = Array.from(colLabels);
+      const rowTotals = new Map<string, number>();
+      const colTotals = new Map<string, number>();
+      for (const rowLabel of rows) {
+        let sum = 0;
+        for (const colLabel of cols) {
+          sum += pairCounts.get(JSON.stringify([rowLabel, colLabel])) ?? 0;
+        }
+        rowTotals.set(rowLabel, sum);
+      }
+      for (const colLabel of cols) {
+        let sum = 0;
+        for (const rowLabel of rows) {
+          sum += pairCounts.get(JSON.stringify([rowLabel, colLabel])) ?? 0;
+        }
+        colTotals.set(colLabel, sum);
+      }
+
+      let chiSquare = 0;
+      let lowExpectedCellCount = 0;
+      const totalCells = rows.length * cols.length;
+      for (const rowLabel of rows) {
+        for (const colLabel of cols) {
+          const observed = pairCounts.get(JSON.stringify([rowLabel, colLabel])) ?? 0;
+          const expected = (rowTotals.get(rowLabel)! * colTotals.get(colLabel)!) / total;
+          if (expected < 5) lowExpectedCellCount += 1;
+          if (expected > 0) {
+            chiSquare += (observed - expected) ** 2 / expected;
+          }
+        }
+      }
+
+      const df = (rows.length - 1) * (cols.length - 1);
+      const pValue = Number(chiSquarePValue(chiSquare, df).toFixed(4));
+      const significant = pValue < SIGNIFICANCE_LEVEL;
+      const minDimension = Math.min(rows.length - 1, cols.length - 1);
+      const cramersV =
+        minDimension === 0
+          ? 0
+          : Number(Math.sqrt(chiSquare / (total * minDimension)).toFixed(3));
+      const reliable = lowExpectedCellCount / totalCells <= 0.2;
+      const pText = pValue < 0.001 ? "p<0.001" : `p=${pValue.toFixed(4)}`;
+
+      pairs.push({
+        columnA,
+        columnB,
+        chiSquare: Number(chiSquare.toFixed(3)),
+        pValue,
+        significant,
+        cramersV,
+        reliable,
+        interpretation: !reliable
+          ? "표본이 작아 참고용"
+          : significant
+            ? `카이제곱=${chiSquare.toFixed(2)}, ${pText}로 통계적으로 유의한 연관성(Cramér's V=${cramersV})`
+            : `카이제곱=${chiSquare.toFixed(2)}, ${pText}로 통계적으로 유의한 연관성 없음`,
+      });
+    }
+  }
+
+  return pairs;
+}
+
+export function computeVif(dataset: ParsedDataset, schema: SchemaSummary): VifResult[] {
+  const numericColumns = schema.columns.filter((c) => c.type === "numeric");
+  if (numericColumns.length < 2) return [];
+
+  const completeCases = dataset.rows.filter((row) =>
+    numericColumns.every((c) => typeof row[c.name] === "number")
+  );
+
+  return numericColumns.map((column) => {
+    const others = numericColumns.filter((c) => c.name !== column.name);
+    if (completeCases.length < others.length + 2) {
+      return { column: column.name, vif: null, concern: false };
+    }
+
+    const target = completeCases.map((row) => row[column.name] as number);
+    const predictors = others.map((other) =>
+      completeCases.map((row) => row[other.name] as number)
+    );
+
+    const rSquared = multipleRegressionRSquared(target, predictors);
+    if (rSquared === null || rSquared >= 1) {
+      return { column: column.name, vif: null, concern: false };
+    }
+
+    const vif = Number((1 / (1 - rSquared)).toFixed(2));
+    return { column: column.name, vif, concern: vif > 10 };
+  });
 }

@@ -3,10 +3,18 @@
 // AI 접점 UI: 규칙 기반 분석 엔진이 계산한 요약(NarratorInput)만 /api/narrate로 보내고, 원본 행 데이터는 절대 전송하지 않는다
 import { useState } from "react";
 import { Button, Banner, Skeleton, Markdown, Text } from "@astryxdesign/core";
-import type { NarratorInput, ProjectRecord } from "@/types/analysis";
+import type { NarratorInput, NarratorTimeSeries, ProjectRecord } from "@/types/analysis";
 
 function buildNarratorInput(project: ProjectRecord): NarratorInput {
   const { analysis } = project;
+  const timeSeriesSummary: NarratorTimeSeries[] | undefined = analysis.timeSeriesSummary?.map((item) => ({
+    dateColumn: item.dateColumn,
+    numericColumn: item.numericColumn,
+    trendDirection: item.trendDirection,
+    momChange: item.momChange,
+    yoyChange: item.yoyChange,
+  }));
+
   return {
     projectTitle: project.meta.title,
     dataType: project.meta.dataType,
@@ -17,6 +25,11 @@ function buildNarratorInput(project: ProjectRecord): NarratorInput {
     numericSummary: analysis.numericSummary,
     categoricalSummary: analysis.categoricalSummary,
     ruleBasedInsight: analysis.insightSummary,
+    correlationSummary: analysis.correlationSummary,
+    categoricalCorrelationSummary: analysis.categoricalCorrelationSummary,
+    vifSummary: analysis.vifSummary,
+    groupComparisonSummary: analysis.groupComparisonSummary,
+    timeSeriesSummary,
   };
 }
 

@@ -6,11 +6,15 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  ErrorBar,
   Line,
   LineChart,
   Pie,
   PieChart,
+  ReferenceLine,
   ResponsiveContainer,
+  Scatter,
+  ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
@@ -41,7 +45,11 @@ export function ChartRenderer({ spec }: { spec: ChartSpec }) {
             dataKey={spec.yKey}
             fill={spec.type === "grouped-bar" ? "#10b981" : "#3b82f6"}
             radius={[4, 4, 0, 0]}
-          />
+          >
+            {spec.errorKey ? (
+              <ErrorBar dataKey={spec.errorKey} width={4} strokeWidth={1.5} stroke="#6b7280" />
+            ) : null}
+          </Bar>
         </BarChart>
       ) : spec.type === "line" ? (
         <LineChart data={spec.data}>
@@ -51,6 +59,34 @@ export function ChartRenderer({ spec }: { spec: ChartSpec }) {
           <Tooltip />
           <Line type="monotone" dataKey={spec.yKey} stroke="#3b82f6" strokeWidth={2} dot={false} />
         </LineChart>
+      ) : spec.type === "scatter" ? (
+        <ScatterChart>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <XAxis
+            type="number"
+            dataKey={spec.xKey}
+            domain={["auto", "auto"]}
+            tick={{ fontSize: 12 }}
+            name={spec.xKey}
+          />
+          <YAxis
+            type="number"
+            dataKey={spec.yKey}
+            domain={["auto", "auto"]}
+            tick={{ fontSize: 12 }}
+            name={spec.yKey}
+          />
+          <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+          <Scatter data={spec.data} fill="#3b82f6" fillOpacity={0.7} />
+          {spec.trendLine ? (
+            <ReferenceLine
+              segment={spec.trendLine.segment}
+              stroke="#ef4444"
+              strokeDasharray="6 4"
+              strokeWidth={1.5}
+            />
+          ) : null}
+        </ScatterChart>
       ) : (
         <PieChart>
           <Tooltip />

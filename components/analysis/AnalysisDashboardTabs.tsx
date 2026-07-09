@@ -18,6 +18,8 @@ import type {
 import { ChartRenderer } from "@/components/render/ChartRenderer";
 import { AnalysisMapClient } from "@/components/render/AnalysisMapClient";
 import { SimpleDataTable } from "@/components/render/SimpleDataTable";
+import { CorrelationHeatmap } from "@/components/render/CorrelationHeatmap";
+import { buildCorrelationMatrix } from "@/lib/analytics/heatmapMatrix";
 import { AiNarratorPanel } from "@/components/analysis/AiNarratorPanel";
 import {
   availableColumnTypes,
@@ -130,7 +132,22 @@ const TIME_SERIES_COLUMNS: ColumnDef<TimeSeriesAnalysis>[] = [
     cell: (info) => (info.getValue() as number).toFixed(3),
   },
   { accessorKey: "trendDirection", header: "추세 방향" },
+  {
+    accessorKey: "momChange",
+    header: "전월대비",
+    cell: (info) => formatChangeRate(info.getValue() as number | null),
+  },
+  {
+    accessorKey: "yoyChange",
+    header: "전년동월대비",
+    cell: (info) => formatChangeRate(info.getValue() as number | null),
+  },
 ];
+
+function formatChangeRate(value: number | null): string {
+  if (value === null) return "산출 불가";
+  return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
+}
 
 const COLUMN_OVERVIEW_COLUMNS: ColumnDef<ColumnOverviewRow>[] = [
   { accessorKey: "name", header: "변수명" },
@@ -177,6 +194,10 @@ export function AnalysisDashboardTabs({ project }: { project: ProjectRecord }) {
     () => filterColumnsByType(columnOverview, columnTypeFilter),
     [columnOverview, columnTypeFilter]
   );
+  const correlationMatrix = useMemo(
+    () => buildCorrelationMatrix(analysis.correlationSummary ?? []),
+    [analysis.correlationSummary]
+  );
 
   return (
     <div>
@@ -204,6 +225,7 @@ export function AnalysisDashboardTabs({ project }: { project: ProjectRecord }) {
               {analysis.chartSpecs.map((spec) => (
                 <Card key={spec.id}>
                   <Text type="label">{spec.title}</Text>
+                  {spec.subtitle ? <Text type="supporting">{spec.subtitle}</Text> : null}
                   <ChartRenderer spec={spec} />
                 </Card>
               ))}
@@ -269,7 +291,10 @@ export function AnalysisDashboardTabs({ project }: { project: ProjectRecord }) {
             <div>
               <Text type="label">상관관계 분석</Text>
               {analysis.correlationSummary && analysis.correlationSummary.length > 0 ? (
-                <SimpleDataTable columns={CORRELATION_COLUMNS} data={analysis.correlationSummary} />
+                <>
+                  <CorrelationHeatmap matrix={correlationMatrix} />
+                  <SimpleDataTable columns={CORRELATION_COLUMNS} data={analysis.correlationSummary} />
+                </>
               ) : (
                 <Text color="secondary">상관관계를 계산할 수치형 변수 쌍이 없습니다.</Text>
               )}
