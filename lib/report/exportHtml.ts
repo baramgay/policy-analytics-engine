@@ -123,7 +123,7 @@ export function buildReportHtml(meta: ProjectMeta, analysis: AnalysisResult): st
   @media print {
     body { background: #fff; color: #000; font-size: 11pt; }
     h1, h2 { break-after: avoid; }
-    table, li { break-inside: avoid; }
+    table { break-inside: avoid; }
   }
   @page { margin: 18mm; }
 </style>

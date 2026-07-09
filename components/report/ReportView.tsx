@@ -60,8 +60,7 @@ export function ReportView({ project }: { project: ProjectRecord }) {
           style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 16 }}
         >
           <Button label="링크 복사" onClick={handleCopyLink} />
-          <Button label="PDF로 내보내기" onClick={handleExportPdf} />
-          <Button label="인쇄 / PDF 저장" onClick={() => window.print()} />
+          <Button label="인쇄 / PDF 저장" onClick={handleExportPdf} />
           <Button label="HTML로 내보내기" onClick={handleExportHtml} />
           <Button label="복사" onClick={handleCopy} />
           <Button label="리포트 저장" variant="primary" isLoading={isSaving} clickAction={handleSave} />
