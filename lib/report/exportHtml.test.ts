@@ -131,4 +131,175 @@ describe("buildReportHtml", () => {
     expect(html).not.toContain("수치형 변수 통계");
     expect(html).not.toContain("범주형 변수 통계");
   });
+
+  describe("optional statistical sections", () => {
+    function buildEnrichedAnalysis(): AnalysisResult {
+      const { analysis } = buildFixture();
+      return {
+        ...analysis,
+        correlationSummary: [
+          {
+            columnA: "매출액",
+            columnB: "방문자수",
+            coefficient: 0.35,
+            strength: "보통",
+            pValue: 0.0021,
+            significant: true,
+            interpretation: "상관계수 0.35, p=0.0021로 통계적으로 유의한 보통 양의 상관관계",
+          },
+        ],
+        categoricalCorrelationSummary: [
+          {
+            columnA: "지역",
+            columnB: "요일",
+            chiSquare: 12.5,
+            pValue: 0.01,
+            significant: true,
+            cramersV: 0.3,
+            reliable: true,
+            interpretation: "카이제곱=12.50, p=0.0100로 통계적으로 유의한 연관성(Cramér's V=0.3)",
+          },
+        ],
+        vifSummary: [
+          { column: "매출액", vif: 12.3, concern: true },
+          { column: "방문자수", vif: 2.1, concern: false },
+        ],
+        groupComparisonSummary: [
+          {
+            groupColumn: "지역",
+            numericColumn: "매출액",
+            method: "welch-t",
+            groupCount: 2,
+            statistic: 2.5,
+            pValue: 0.02,
+            significant: true,
+            groupMeans: [
+              { group: "창원", mean: 1600, count: 60, sd: 180 },
+              { group: "김해", mean: 1300, count: 40, sd: 210 },
+            ],
+            effectSize: { type: "cohen_d", value: 0.45, magnitude: "중간" },
+            interpretation: "p=0.0200로 유의하며 효과크기(d=0.45)도 중간",
+          },
+        ],
+        outlierSummary: [
+          {
+            column: "매출액",
+            lowerBound: 800,
+            upperBound: 2200,
+            outlierCount: 5,
+            outlierIndices: [1, 2, 3, 4, 5],
+            highConfidenceIndices: [1, 2, 3],
+            referenceIndices: [4, 5],
+          },
+        ],
+        timeSeriesSummary: [
+          {
+            dateColumn: "일자",
+            numericColumn: "매출액",
+            trendSlope: 1.2,
+            trendIntercept: 100,
+            trendDirection: "증가",
+            points: [],
+            momChange: 5.2,
+            yoyChange: null,
+          },
+        ],
+      };
+    }
+
+    it("renders all six optional sections when their data is present", () => {
+      const { meta } = buildFixture();
+      const html = buildReportHtml(meta, buildEnrichedAnalysis());
+
+      expect(html).toContain("<h2>상관 검정</h2>");
+      expect(html).toContain("<h2>범주형 변수 연관성</h2>");
+      expect(html).toContain("<h2>다중공선성 진단</h2>");
+      expect(html).toContain("<h2>그룹 차이 검정</h2>");
+      expect(html).toContain("<h2>이상치 탐지</h2>");
+      expect(html).toContain("<h2>시계열 동향</h2>");
+
+      expect(html).toContain("회귀 분석 시 해당 변수들의 동시 투입에 주의가 필요합니다.");
+      expect(html).toContain("3건");
+      expect(html).toContain("2건");
+      expect(html).toContain("+5.2%");
+      expect(html).toContain("산출 불가");
+    });
+
+    it("omits all six optional sections when their data is absent", () => {
+      const { meta, analysis } = buildFixture();
+      const html = buildReportHtml(meta, analysis);
+
+      expect(html).not.toContain("<h2>상관 검정</h2>");
+      expect(html).not.toContain("<h2>범주형 변수 연관성</h2>");
+      expect(html).not.toContain("<h2>다중공선성 진단</h2>");
+      expect(html).not.toContain("<h2>그룹 차이 검정</h2>");
+      expect(html).not.toContain("<h2>이상치 탐지</h2>");
+      expect(html).not.toContain("<h2>시계열 동향</h2>");
+    });
+
+    it("omits the correlation section when no pair is significant", () => {
+      const analysis: AnalysisResult = {
+        ...buildEnrichedAnalysis(),
+        correlationSummary: [
+          {
+            columnA: "매출액",
+            columnB: "방문자수",
+            coefficient: 0.05,
+            strength: "거의 없음",
+            pValue: 0.8,
+            significant: false,
+            interpretation: "상관계수 0.05, p=0.8000로 통계적으로 유의하지 않음",
+          },
+        ],
+      };
+      const { meta } = buildFixture();
+      const html = buildReportHtml(meta, analysis);
+
+      expect(html).not.toContain("<h2>상관 검정</h2>");
+    });
+
+    it("omits the outlier section when every column has zero outliers", () => {
+      const analysis: AnalysisResult = {
+        ...buildEnrichedAnalysis(),
+        outlierSummary: [
+          {
+            column: "매출액",
+            lowerBound: 800,
+            upperBound: 2200,
+            outlierCount: 0,
+            outlierIndices: [],
+            highConfidenceIndices: [],
+            referenceIndices: [],
+          },
+        ],
+      };
+      const { meta } = buildFixture();
+      const html = buildReportHtml(meta, analysis);
+
+      expect(html).not.toContain("<h2>이상치 탐지</h2>");
+    });
+
+    it("escapes HTML special characters in interpretation text", () => {
+      const analysis: AnalysisResult = {
+        ...buildEnrichedAnalysis(),
+        correlationSummary: [
+          {
+            columnA: "<b>매출액</b>",
+            columnB: "방문자수",
+            coefficient: 0.35,
+            strength: "보통",
+            pValue: 0.0021,
+            significant: true,
+            interpretation: "<script>alert('xss')</script>",
+          },
+        ],
+      };
+      const { meta } = buildFixture();
+      const html = buildReportHtml(meta, analysis);
+
+      expect(html).not.toContain("<script>alert('xss')</script>");
+      expect(html).not.toContain("<b>매출액</b>");
+      expect(html).toContain("&lt;script&gt;");
+    });
+  });
 });
