@@ -30,4 +30,11 @@ describe("runAnalysisAsync (동기 폴백 경로)", () => {
     expect(result.qualityScore).toBeGreaterThanOrEqual(0);
     expect(result.generatedAt).toEqual(expect.any(String));
   });
+
+  it("동기 폴백 경로에서 runAnalysis가 동기적으로 throw해도 Promise reject로 전달된다", async () => {
+    // columns가 없으면 profileSchema의 dataset.columns.map(...)에서 TypeError가 동기적으로 발생한다
+    const badDataset = { rows: [] } as unknown as ParsedDataset;
+
+    await expect(runAnalysisAsync(badDataset)).rejects.toThrow();
+  });
 });

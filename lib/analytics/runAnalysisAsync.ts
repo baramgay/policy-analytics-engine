@@ -3,9 +3,10 @@ import type { AnalysisResult, ParsedDataset } from "@/types/analysis";
 import { runAnalysis } from "./index";
 import type { AnalysisWorkerResponse } from "./analysisWorker";
 
-export function runAnalysisAsync(dataset: ParsedDataset): Promise<AnalysisResult> {
+export async function runAnalysisAsync(dataset: ParsedDataset): Promise<AnalysisResult> {
   if (typeof Worker === "undefined") {
-    return Promise.resolve(runAnalysis(dataset));
+    // async 함수이므로 runAnalysis가 동기적으로 throw해도 자동으로 reject된 Promise로 전달된다
+    return runAnalysis(dataset);
   }
 
   return new Promise((resolve, reject) => {
