@@ -35,7 +35,8 @@ import {
   MetadataListItem,
 } from "@astryxdesign/core";
 import type { DataDomain, ParsedDataset, PreprocessingOptions, PreprocessingSuggestion } from "@/types/analysis";
-import { parseCsvText, parseUploadedFile, runAnalysis } from "@/lib/analytics";
+import { parseCsvText, parseUploadedFile } from "@/lib/analytics";
+import { runAnalysisAsync } from "@/lib/analytics/runAnalysisAsync";
 import { profileSchema } from "@/lib/analytics/schemaProfiler";
 import { analyzePreprocessing, applyPreprocessing } from "@/lib/analytics/preprocessor";
 import { createProject } from "@/lib/data/store";
@@ -200,7 +201,7 @@ export default function UploadPage() {
     try {
       const schema = profileSchema(dataset);
       const { dataset: cleaned, report } = applyPreprocessing(dataset, schema, options);
-      const analysis = runAnalysis(cleaned);
+      const analysis = await runAnalysisAsync(cleaned);
       const project = await createProject({
         title,
         description,
