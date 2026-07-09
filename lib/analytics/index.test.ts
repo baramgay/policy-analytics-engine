@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { runAnalysis } from "@/lib/analytics/index";
 import { parseCsvText } from "@/lib/analytics/parser";
 
-function loadSample(fileName: string): Promise<ReturnType<typeof parseCsvText>> {
+function loadSample(fileName: string): ReturnType<typeof parseCsvText> {
   const text = readFileSync(join(process.cwd(), "public", "sample-data", fileName), "utf-8");
   return parseCsvText(text);
 }
