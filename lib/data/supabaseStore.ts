@@ -14,6 +14,14 @@ function toAnalysisResult(row: Record<string, unknown>): AnalysisResult {
     mapSpecs: row.map_specs as AnalysisResult["mapSpecs"],
     insightSummary: row.insight_summary as string,
     generatedAt: row.created_at as string,
+    correlationSummary: (row.correlation_summary as AnalysisResult["correlationSummary"]) ?? [],
+    categoricalCorrelationSummary:
+      (row.categorical_correlation_summary as AnalysisResult["categoricalCorrelationSummary"]) ?? [],
+    vifSummary: (row.vif_summary as AnalysisResult["vifSummary"]) ?? [],
+    outlierSummary: (row.outlier_summary as AnalysisResult["outlierSummary"]) ?? [],
+    groupComparisonSummary:
+      (row.group_comparison_summary as AnalysisResult["groupComparisonSummary"]) ?? [],
+    timeSeriesSummary: (row.time_series_summary as AnalysisResult["timeSeriesSummary"]) ?? [],
   };
 }
 
@@ -131,6 +139,12 @@ export async function createProjectRemote(
       chart_specs: input.analysis.chartSpecs,
       map_specs: input.analysis.mapSpecs,
       insight_summary: input.analysis.insightSummary,
+      correlation_summary: input.analysis.correlationSummary,
+      categorical_correlation_summary: input.analysis.categoricalCorrelationSummary,
+      vif_summary: input.analysis.vifSummary,
+      outlier_summary: input.analysis.outlierSummary,
+      group_comparison_summary: input.analysis.groupComparisonSummary,
+      time_series_summary: input.analysis.timeSeriesSummary,
     })
     .select()
     .single();
